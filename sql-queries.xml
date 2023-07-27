@@ -1,0 +1,2431 @@
+<!DOCTYPE sql-queries [
+<!ELEMENT sql-queries (sql-query)*>
+<!ELEMENT sql-query (#PCDATA)>
+<!ATTLIST sql-query id CDATA #REQUIRED>
+]>
+<sql-queries>
+<!-- Master Data Queries -->
+<sql-query id="getInputSources">
+     <![CDATA[SELECT * FROM cms_route_of_enquiry;]]>
+</sql-query>
+<sql-query id="getEnquirers">
+     <![CDATA[SELECT * FROM cms_enquirers;]]>
+</sql-query>
+<sql-query id="getNatureofEnquiries">
+     <![CDATA[SELECT * FROM cms_nature_of_enquiry;;]]>
+</sql-query>  
+
+<sql-query id="getCaseInfo">
+     <![CDATA[SELECT
+                    c.*,
+                    cc.country_name as countryName,
+                    cc.country_code as countryCode,
+                    cre.name as routeOfEnquiryId,
+                    cre.type as routeOfEnquiryType,
+                    cne.name as natureOfEnquiryId,
+                    DATEDIFF(CURDATE(), DATE_FORMAT(c.receievedDate, '%Y-%m-%d')) as dueDays,
+                    csrd.reporterSalutation, csrd.reporterName, csrd.reporterEmail, csrd.reporterFax, csrd.reporterPhone, csrd.reporterState, csrd.reporterCountry, csrd.reporterStreet, csrd.reporterPostalCode, csrd.reporterCity, csrd.reporterAddress, csrd.reporterContactMethod, csrd.regulatoryAuthorityName, csrd.otherReportedBy,
+                    (CASE WHEN csrd.isPrimaryReporter = 1 THEN 'Yes' WHEN csrd.isPrimaryReporter = 0 THEN 'No' WHEN csrd.isPrimaryReporter is null THEN '' END) as isPrimaryReporter,
+                    (CASE WHEN c.isCaseValid = 1 THEN 'Accepted' WHEN c.isCaseValid = 0 THEN 'Rejected' WHEN c.isCaseValid is null THEN '' END) as isCaseValid,
+                    (CASE WHEN c.isReportisSamePatient = 1 THEN 'Yes' WHEN c.isReportisSamePatient = 0 THEN 'No' WHEN c.isReportisSamePatient is null THEN '' END) as isReportisSamePatient,
+                    (CASE WHEN c.isFollowupRequired = 1 THEN 'Yes' WHEN c.isFollowupRequired = 0 THEN 'No' WHEN c.isFollowupRequired is null THEN '' END) as isFollowupRequired,
+                    (CASE WHEN c.isContractTreatingPhysician = 1 THEN 'Yes' WHEN c.isContractTreatingPhysician = 0 THEN 'No' WHEN c.isContractTreatingPhysician is null THEN '' END) as isContractTreatingPhysician,
+                    (CASE WHEN c.isFollowupDone = 1 THEN 'Yes' WHEN c.isFollowupDone = 0 THEN 'No' WHEN c.isFollowupDone is null THEN '' END) as isFollowupDone,
+                    (CASE WHEN c.patientGender = 'M' THEN 'Male' WHEN c.patientGender = 'F' THEN 'Female' WHEN c.patientGender is null THEN '' END) as patientGender,
+                    (CASE WHEN c.isPatientisbaby = 1 THEN 'Yes' WHEN c.isPatientisbaby = 0 THEN 'No' WHEN c.isPatientisbaby is null THEN '' END) as isPatientisbaby,
+                    (CASE WHEN c.isoutcomefatal = 1 THEN 'Yes' WHEN c.isoutcomefatal = 0 THEN 'No' WHEN c.isoutcomefatal is null THEN '' END) as isoutcomefatal,
+                    (CASE WHEN c.studyInfoAvailable = 1 THEN 'Yes' WHEN c.studyInfoAvailable = 0 THEN 'No' WHEN c.studyInfoAvailable is null THEN '' END) as studyInfoAvailable,
+                    (CASE WHEN csrd.ishealthcareprofessional = 1 THEN 'Yes' WHEN csrd.ishealthcareprofessional = 0 THEN 'No' WHEN csrd.ishealthcareprofessional is null THEN '' END) as ishealthcareprofessional,
+                    (CASE WHEN csrd.isReporterDrugRegulatorAuthority = 1 THEN 'Yes' WHEN csrd.isReporterDrugRegulatorAuthority = 0 THEN 'No' WHEN isReporterDrugRegulatorAuthority is null THEN '' END) as isReporterDrugRegulatorAuthority,
+                    (
+                         CASE
+                         WHEN
+                              c.patientAgegroup = '1'
+                         THEN
+                              'Neonate'
+                         WHEN
+                              c.patientAgegroup = '2'
+                         THEN
+                              'Infant'
+                         WHEN
+                              c.patientAgegroup = '3'
+                         THEN
+                              'Child'
+                         WHEN
+                              c.patientAgegroup = '4'
+                         THEN
+                              'Adolescent'
+                         WHEN
+                              c.patientAgegroup = '5'
+                         THEN
+                              'Adult'
+                         WHEN
+                              c.patientAgegroup = '6'
+                         THEN
+                              'Elderly'
+                         ELSE
+                              ''
+                         END
+                    )
+                    AS patientAgegroup,
+                    (
+                         CASE
+                         WHEN
+                              c.caseComplexity = 'P1'
+                         THEN
+                              'Priority 1'
+                         WHEN
+                              c.caseComplexity = 'P2'
+                         THEN
+                              'Priority 2'
+                         WHEN
+                              c.caseComplexity = 'P3'
+                         THEN
+                              'Priority 3'
+                         WHEN
+                              c.caseComplexity = '4'
+                         THEN
+                              'Adolescent'
+                         WHEN
+                              c.caseComplexity = '5'
+                         THEN
+                              'Adult'
+                         ELSE
+                              ''
+                         END
+                    )
+                    AS caseComplexity, 
+                    (select group_concat(name) from cms_case_classifications ccc where find_in_set(ccc.id, c.caseClassification)) as caseClassification,
+                    (select group_concat(productName) from cms_argus_product_dictionary ccp where find_in_set(ccp.id, c.productId)) as productId,
+                    cc.country_name as patientCountry, cc1.country_name as physicianCountry, cc2.country_name as reporterCountry, ce.name as reportedBy, cre1.name as reporterContactMethod
+                    FROM
+                    cms_cases c
+                    left outer join
+                         cms_countries cc
+                         on cc.id = c.patientCountry
+                    left outer join
+                         cms_countries cc1
+                         on cc1.id = c.physicianCountry
+                    left outer join
+                         cms_route_of_enquiry cre
+                         on cre.id = c.routeOfEnquiryId
+                    left outer join
+                         cms_nature_of_enquiry cne
+                         on cne.id = c.natureOfEnquiryId
+                    left outer join
+                         cms_case_reporter_details csrd
+                         on csrd.caseId = c.id and csrd.isPrimaryReporter = 1
+                    left outer join
+                         cms_enquirers ce
+                         on ce.id = csrd.reportedBy
+                    left outer join
+                         cms_countries cc2
+                         on cc2.id = csrd.reporterCountry
+                    left outer join
+                         cms_route_of_enquiry cre1
+                         on cre1.id = csrd.reporterContactMethod
+                         and cre1.type = 'ContactMethod' WHERE ]]>
+</sql-query>
+<sql-query id="getCaseCount">
+     <![CDATA[select
+          COUNT(c.id) as count 
+               from
+          cms_cases c 
+          WHERE ]]>
+</sql-query>
+<sql-query id="getCountriesData">
+     <![CDATA[SELECT * FROM cms_argus_countries;]]>
+</sql-query>
+<sql-query id="getSearchProductData">
+     <![CDATA[SELECT *,CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE active = 1  ]]>
+</sql-query>
+<sql-query id="getSearchProductDataCount">
+     <![CDATA[SELECT COUNT(id) as count from cms_argus_product_dictionary WHERE active = 1 ]]>
+</sql-query>
+<sql-query id="saveCaseProductData">
+     <![CDATA[INSERT INTO cms_case_products(`productId`, `caseId`, `productName`, `manufacturedBy`, `strengths`, `size`, `ncdNumber`, `lotNumber`,  `numberOfBottle`, `exipiryDate`, `country`, `maNumber`, `activeIngredient`, `type`, `createdBy`, `createdDate`,  `active`, `caseClassification`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="getCaseProductData">
+     <![CDATA[SELECT * FROM cms_case_products WHERE caseId = ? and productId in (?);]]>
+</sql-query>
+<sql-query id="getCaseProductIds">
+     <![CDATA[SELECT * FROM cms_case_products WHERE caseId = ? and productId = ?;]]>
+</sql-query>
+<sql-query id="caseProductExistancyById">
+     <![CDATA[SELECT * FROM cms_case_products WHERE productId = ? AND caseId = ?;]]>
+</sql-query>
+<sql-query id="getCaseProductIdsArray">
+     <![CDATA[SELECT productId FROM cms_case_products WHERE caseId = ?;]]>
+</sql-query>
+<sql-query id="getProductsByCaseId">
+     <![CDATA[SELECT *, productId as id, 1 as selected From cms_case_products WHERE active = 1 and caseId = ?;]]>
+</sql-query>
+<sql-query id="getCaseProductExistency">
+     <![CDATA[SELECT id From cms_case_products WHERE active = 1 and productId = ? and caseId = ?;]]>
+</sql-query>
+<sql-query id="getProductsByCountryId">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths, 0 as selected
+          FROM cms_argus_product_dictionary WHERE FIND_IN_SET(id, ?) and country = ?;]]>
+</sql-query>
+<sql-query id="deleteCaseProductById">
+     <![CDATA[DELETE FROM cms_case_products WHERE productId = ? and caseId = ?;]]>
+</sql-query>
+<sql-query id="updateCaseProductDataById">
+     <![CDATA[UPDATE cms_case_products SET `caseClassification` = ?, `modifiedBy` = ?, `modifiedDate` = ?  where productId = ? and caseId = ?;]]>
+</sql-query>
+<sql-query id="updateCaseProductData">
+     <![CDATA[UPDATE cms_case_products SET `productName` = ?, `manufacturedBy` = ?, `strengths` = ?, `size` = ?, `ncdNumber` = ?, `lotNumber` = ?, `numberOfBottle` = ?, `exipiryDate` = ?, `country` = ?, `maNumber` = ?, `activeIngredient` = ?, `type` = ?, `modifiedBy` = ?, `modifiedDate` = ?, `caseClassification` = ?  where `productId` = ? and `caseId` = ?;]]>
+</sql-query>
+<sql-query id="deleteProducts">
+      <![CDATA[UPDATE cms_argus_product_dictionary SET `active` = 0 WHERE id=?;]]>
+</sql-query>
+
+<sql-query id="getClassifications">
+     <![CDATA[SELECT * FROM cms_case_classifications;]]>
+</sql-query>
+<sql-query id="getClassificationsParam">
+     <![CDATA[SELECT id, name FROM cms_case_classifications;]]>
+</sql-query>
+<sql-query id="getContactMethods">
+     <![CDATA[SELECT * FROM cms_route_of_enquiry where type = ?;]]>
+</sql-query>
+<sql-query id="getCountries">
+     <![CDATA[SELECT * FROM cms_countries;]]>
+</sql-query>
+<sql-query id="getRegulatoryAuthorities">
+     <![CDATA[SELECT * FROM cms_regulatory_authorities;]]>
+</sql-query>
+<!-- END -->
+
+<!-- Auth Queries -->
+<sql-query id="getLogin">
+     <![CDATA[SELECT cu.*, cr.name as roleName, cr.masterRoleId, cs.sendCaseStatus, cs.recieveCaseStatus FROM cms_user cu
+               left outer join cms_role cr on cr.id = cu.user_role_id
+               left outer join cms_case_status cs on cs.id = cr.caseStatusId
+               where userId = ? and password = ?;]]>
+</sql-query>
+<sql-query id="updateInvalidAttempts"> 
+     <![CDATA[UPDATE cms_user SET loginAttempts = ?, active = ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateRequestForPasswordCount"> 
+     <![CDATA[UPDATE cms_user SET requestForPasswordCount = ? where userId = ?;]]>
+</sql-query>
+<sql-query id="getRolePermissions"> 
+     <![CDATA[SELECT  * FROM cms_role_permissions where role_id = ?;]]>
+</sql-query>
+<sql-query id="getPermissionNames">
+     <![CDATA[SELECT permission from cms_permissions where id in (?);]]>
+</sql-query>
+<sql-query id="getModulePermissions">
+     <![CDATA[SELECT cp.permission from cms_permissions cp 
+left join cms_role_permissions crp ON FIND_IN_SET(cp.id, crp.permission_ids) 
+where crp.role_id = ? and cp.moduleId = ?;]]>
+</sql-query>
+ <sql-query id="activateDeactivateRole">
+     <![CDATA[update cms_role SET active = ? where id = ?;]]>
+    </sql-query> 
+<sql-query id="getUsersBasedOnRole">
+     <![CDATA[SELECT id, username,active FROM cms_user where user_role_id = ?;]]>
+</sql-query>
+<sql-query id="getUserRoleId">
+     <![CDATA[SELECT id FROM cms_role where name = ?;]]>
+</sql-query>
+<sql-query id="getUserRoles">
+     <![CDATA[SELECT id as roleid, name as rolename FROM cms_role WHERE isMasterRole is null;]]>
+</sql-query>
+<sql-query id="getModulesPermission">
+     <![CDATA[SELECT cm.id, cm.moduleName, cr.isMasterRole from cms_modules cm  
+          inner join cms_role_modules crm on FIND_IN_SET(cm.id, crm.moduleIds)
+          inner join cms_role cr on cr.masterRoleId = crm.id where cr.id = ? order by cm.id;]]>
+</sql-query>
+<sql-query id="getModulePermissionsByRole">
+     <![CDATA[SELECT * FROM cms_role_permissions crp
+               left join cms_permissions cp on find_in_set(cp.id, crp.permission_ids) 
+               left join cms_modules cm on cm.id = cp.moduleId
+          where cp.moduleId = ? and crp.role_id = ? group by crp.role_id;]]>
+</sql-query>
+<sql-query id="getPermissionsList">
+     <![CDATA[SELECT cp.id as permissionId, cp.permissions_display_name, cp.permission, cm.moduleName, cm.id as moduleId
+               from cms_permissions cp left join cms_modules cm on FIND_IN_SET(cm.id,cp.moduleId)]]>
+</sql-query>
+<sql-query id="getmasterroles">
+     <![CDATA[SELECT * FROM cms_role where isMasterRole = ?;]]>   
+</sql-query>
+
+<!-- END -->
+
+<!-- Case Queries-->
+<sql-query id="postEnquiryDetails">
+     <![CDATA[INSERT INTO cms_cases(`registrationId`, `version`,`isCaseValid`, `reasonForRejection`,`reasonForAcceptance`,`reportedDate`, `routeOfEnquiryId`, `caseSourceDocumentIds`,
+      `receievedDate`, `caseSubject`, `caseDescription`, `isFollowupRequired`, `isFollowupDone`,  `caseClassification`, `caseStatus`, `productId`, `caseManageStatus`, `initiatedBy`, `initiatedOn`, `referenceNumbers`, `primaryReporterEmail`, `productCountry`, `viewStatus`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,1);]]>
+</sql-query>
+<sql-query id="postRejectCase">
+     <![CDATA[INSERT INTO cms_cases(`registrationId`,`isCaseValid`, `reasonForRejection`) VALUES (?,?,?);]]>
+</sql-query>
+<sql-query id="insertAutomatedEmailData">
+     <![CDATA[INSERT INTO cms_cases(`registrationId`, `reportedDate`, `routeOfEnquiryId`,
+      `receievedDate`, `caseDescription`, `caseSubject`, `caseStatus`, `primaryReporterEmail`, `caseManageStatus`, `initiatedBy`, `acknowledgmentSentDate`, `version`, `isCaseValid`, `crawledCase`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="insertSourcedDocumentsWithBlobData">
+     <![CDATA[INSERT INTO cms_documents(`caseId`, `filename`,`fileType`,`blobFile`,`blobFileType`,`blobFileSize`) VALUES (?, ?, ?, ?, ?, ?);]]>
+</sql-query>
+<sql-query id="insertSourcedDocuments">
+     <![CDATA[INSERT INTO cms_documents(`caseId`, `filename`,`fileType`) VALUES (?, ?, ?);]]>
+</sql-query>
+<sql-query id="getCaseById">
+     <![CDATA[SELECT * FROM cms_cases WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getCaseByIdXML">
+     <![CDATA[SELECT c.*, cc.country_code as patientCountryCode, cr.name as routeOfEnquiryId,
+          csrd.*, cc2.country_code as reporterCountry
+          FROM cms_cases c 
+          left outer join cms_countries cc ON c.patientCountry = cc.id
+          left outer join cms_route_of_enquiry cr on cr.id = c.routeOfEnquiryId 
+          left outer join cms_case_reporter_details csrd on csrd.caseId = c.id and csrd.isPrimaryReporter = 1
+          left outer join cms_countries cc2 on cc2.id = csrd.reporterCountry
+          WHERE c.id = ?;]]>
+</sql-query>
+<sql-query id="getProductsByCaseId1">
+     <![CDATA[SELECT cases.productId,argus.* FROM cms_cases cases
+     LEFT JOIN cms_argus_product_dictionary argus on argus.id = cases.productId
+     WHERE cases.productId = ?;]]>
+</sql-query>
+<sql-query id="getCaseFolloupsByType">
+     <![CDATA[SELECT * FROM cms_case_followups WHERE caseId = ? and followupType = ? ORDER BY followupRequestedOn;]]>
+</sql-query>
+<sql-query id="getAllCaseFolloupsByType">
+     <![CDATA[SELECT cf.id, cf.caseId, cf.createdOn, cf.followupFile, cf.followupMessage, cf.followupRequestedBy, cf.followupType, cf.followupRequestedTo as reporterEmail, cf.followupSubject as caseSubject, cf.followupRequestedOn as reportedDate, 
+               (SELECT COUNT(ccf.id) FROM cms_case_followups ccf left join cms_cases cc on ccf.caseId = cc.id WHERE (ccf.followupType = ? OR ccf.followupType = 'FORWARD_MAIL') and cc.routeOfEnquiryId = ?) as count 
+               FROM cms_case_followups cf left join cms_cases c on cf.caseId = c.id WHERE (cf.followupType = ? OR cf.followupType = 'FORWARD_MAIL') and c.routeOfEnquiryId = ? ]]>
+</sql-query>
+<sql-query id="getAllCaseFolloupsByTypeSearchInput">
+     <![CDATA[SELECT cf.id, cf.caseId, cf.createdOn, cf.followupFile, cf.followupMessage, cf.followupRequestedBy, cf.followupType, cf.followupRequestedTo as reporterEmail, cf.followupSubject as caseSubject, cf.followupRequestedOn as reportedDate, 
+               (SELECT COUNT(ccf.id) FROM cms_case_followups ccf left join cms_cases cc on ccf.caseId = cc.id WHERE (ccf.followupType = ? OR ccf.followupType = 'FORWARD_MAIL') and cc.routeOfEnquiryId = ? and (ccf.followupSubject LIKE ? OR ccf.followupMessage LIKE ?)) as count 
+               FROM cms_case_followups cf left join cms_cases c on cf.caseId = c.id WHERE (cf.followupType = ? OR cf.followupType = 'FORWARD_MAIL') and c.routeOfEnquiryId = ? and (cf.followupSubject LIKE ? OR cf.followupMessage LIKE ?) ]]>
+</sql-query>
+<sql-query id="getCaseFolloupsByCaseId">
+     <![CDATA[SELECT * FROM cms_case_followups WHERE caseId = ?;]]>
+</sql-query>
+<sql-query id="getSourceDocsByCaseId">
+     <![CDATA[SELECT * FROM cms_documents WHERE caseId = ?;]]>
+</sql-query>
+<sql-query id="getDocumentsDataByCaseId">
+     <![CDATA[SELECT filename FROM cms_documents WHERE caseId = ?;]]>
+</sql-query>
+<sql-query id="getSafetyReportIdByCaseId">
+     <![CDATA[SELECT * FROM cms_cases WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getSourceDocumentsByCaseId">
+     <![CDATA[SELECT cd.* FROM cms_documents cd left outer join cms_cases cc on FIND_IN_SET(cd.id, cc.caseSourceDocumentIds) where cc.id = ?;]]>
+</sql-query>
+<sql-query id="getMiDocumentsByCaseId">
+     <![CDATA[SELECT cd.* FROM cms_documents cd left outer join cms_cases cc on FIND_IN_SET(cd.id, cc.caseMedicalDocumentsIds) where cc.id = ?;]]>
+</sql-query>
+<sql-query id="getDuplicateArticlesByEnquiryDetails">
+     <![CDATA[SELECT * FROM cms_cases where caseSubject = ? and productId IN (?)]]>
+</sql-query>
+<sql-query id="getDuplicateArticlesByReporterDetails">
+     <![CDATA[SELECT * FROM cms_cases where reporterEmail = ? and reporterPhone = ? and reporterCountry = ? and productId = ?]]>
+</sql-query>
+<sql-query id="getLastCaseId">
+     <![CDATA[SELECT id FROM cms_cases ORDER BY id desc limit 1;]]>
+</sql-query>
+<sql-query id="updateCase">
+     <![CDATA[UPDATE cms_cases SET ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateCaseByCaseIds">
+     <![CDATA[UPDATE cms_cases SET ? where FIND_IN_SET(id, ?);]]>
+</sql-query>
+<sql-query id="insertcaselog">
+     <![CDATA[INSERT INTO cms_case_log(`caseId`,`log`,`logUserId`,`loggedBy`,`createdBy`) VALUES (?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="insertcaseaudit">
+     <![CDATA[INSERT INTO cms_case_audits(`caseId`,`userName`,`userId`,`activityType`,`fieldName`,`oldValue`,`newValue`,`stage`,`section`,`createdOn`,`createdBy`) VALUES (?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="getCases">
+     <![CDATA[SELECT * FROM cms_cases]]>
+</sql-query>
+<sql-query id="getCasesForInitiatorFilter">
+     <![CDATA[SELECT cs.*, cr.name as routeOfEnquiryId  FROM cms_cases cs left join cms_route_of_enquiry cr on cr.id = cs.routeOfEnquiryId where cs.initiatedBy = ? and cs.caseStatus = 'Open' and cs.caseManageStatus = ? ]]>
+</sql-query>
+<sql-query id="getCasesForReviewerFilterAll">
+     <![CDATA[SELECT cs.*, cr.name as routeOfEnquiryId  FROM cms_cases cs left join cms_route_of_enquiry cr on cr.id = cs.routeOfEnquiryId where cs.assignedTo = ? and cs.caseStatus = 'Open' and (cs.caseManageStatus = ? OR cs.caseManageStatus = 'CASEINTAKE_REJECTION') ]]>
+</sql-query>
+<sql-query id="getCasesForReviewerFilter">
+     <![CDATA[SELECT cs.*, cr.name as routeOfEnquiryId  FROM cms_cases cs left join cms_route_of_enquiry cr on cr.id = cs.routeOfEnquiryId where cs.assignedTo = ? and cs.caseStatus = 'Open' and cs.caseManageStatus = ? ]]>
+</sql-query>
+<sql-query id="getCasesForApproverFilter">
+     <![CDATA[SELECT cs.*, cr.name as routeOfEnquiryId  FROM cms_cases cs left join cms_route_of_enquiry cr on cr.id = cs.routeOfEnquiryId where cs.approvedBy = ? and cs.caseStatus = 'Open' and cs.caseManageStatus = ? ]]>
+</sql-query>
+<sql-query id="getCaseByFilter">
+     <![CDATA[SELECT * from cms_cases where caseManageStatus = (SELECT ccs.sendCaseStatus from cms_role cr inner join cms_case_status ccs on cr.caseStatusId = ccs.id where cr.id = (SELECT user_role_id from cms_user where id = ?)) and caseClassification in (?)]]>
+</sql-query>
+<sql-query id="getCasesCount">
+     <![CDATA[SELECT count(id) as count FROM cms_cases]]>
+</sql-query>
+<sql-query id="getCasesCountByPhone">
+     <![CDATA[SELECT count(*) as count FROM cms_cases WHERE routeOfEnquiryId = 1;]]>
+</sql-query>
+<sql-query id="getCasesCountBySource">
+     <![CDATA[SELECT cr.name,cr.id, count(c.id) as count FROM cms_cases c 
+              right join cms_route_of_enquiry cr on cr.id = c.routeOfEnquiryId and c.caseManageStatus = ? and isCaseValid = true and (c.initiatedBy = ? OR c.assignedTo = ? OR c.approvedBy = ?) group by cr.name
+              order by cr.id;]]>
+</sql-query>
+<sql-query id="getCasesCountBySourceReviewer">
+     <![CDATA[SELECT cr.name,cr.id, count(c.id) as count FROM cms_cases c 
+              right join cms_route_of_enquiry cr on cr.id = c.routeOfEnquiryId and (c.caseManageStatus = ? OR caseManageStatus = 'CASEINTAKE_REJECTION') and c.assignedTo = ? group by cr.name
+              order by cr.id;]]>
+</sql-query>
+<sql-query id="getCasesCountBySourceMedicalReviewer">
+     <![CDATA[SELECT cr.name,cr.id, count(c.id) as count FROM cms_cases c 
+              right join cms_route_of_enquiry cr on cr.id = c.routeOfEnquiryId and caseManageStatus = ? and c.medicalReviewBy = ? group by cr.name
+              order by cr.id;]]>
+</sql-query>
+<sql-query id="getCasesCountByClassification">
+     <![CDATA[SELECT cr.name,cr.id, count(c.id) as count FROM cms_cases c 
+              right join cms_case_classifications cr on FIND_IN_SET(cr.classificationStatus, c.caseClassificationStatus) and c.isCaseValid = true group by cr.name
+              order by cr.id;]]>
+</sql-query>
+<sql-query id="getHealthAuthorityMICases">
+     <![CDATA[SELECT count(*) as count FROM cms_cases_health_authority WHERE caseManagementStatus = 'Submitted For MI';]]>
+</sql-query>
+<sql-query id="getHealthAuthorityADRCases">
+     <![CDATA[SELECT count(*) as count FROM cms_cases_health_authority WHERE caseManagementStatus = 'Submitted For ADR';]]>
+</sql-query>
+<sql-query id="getHealthAuthorityPQCCases">
+     <![CDATA[SELECT count(*) as count FROM cms_cases_health_authority WHERE caseManagementStatus = 'Submitted For PQC';]]>
+</sql-query>
+<sql-query id="getCasesCountBySourceInitiator">
+     <![CDATA[SELECT cr.name,cr.id, count(c.id) as count FROM cms_cases c 
+              right join cms_route_of_enquiry cr on cr.id = c.routeOfEnquiryId and c.caseManageStatus = ? and isCaseValid = true and c.initiatedBy = ? group by cr.name
+              order by cr.id;]]>
+</sql-query>
+<sql-query id="getCasesCountBySourceInitiatorEmail">
+     <![CDATA[SELECT cr.name,cr.id, count(c.id) as count FROM cms_cases c 
+              right join cms_route_of_enquiry cr on cr.id = c.routeOfEnquiryId and c.caseManageStatus = ? and isCaseValid = true 
+              where cr.id IN(2,8) group by cr.name
+              order by cr.id;]]>
+</sql-query>
+<sql-query id="getMICasesCountForLM">
+     <![CDATA[SELECT (SELECT COUNT(*) FROM   lm_search_article where article_status = "Submitted For MI") AS pubmedCount,
+                    (SELECT COUNT(*)  FROM   lm_springer_article where article_status = "Submitted For MI") AS adisinsightCount,
+                    (SELECT COUNT(*)  FROM   lm_lls_articles where article_status = "Submitted For MI") AS llsCount;]]>
+</sql-query>
+<sql-query id="getADRCasesCountForLM">
+     <![CDATA[SELECT (SELECT COUNT(*) FROM   lm_search_article where article_status = "Submitted For ADR") AS pubmedCount,
+                    (SELECT COUNT(*)  FROM   lm_springer_article where article_status = "Submitted For ADR") AS adisinsightCount,
+                    (SELECT COUNT(*)  FROM   lm_lls_articles where article_status = "Submitted For ADR") AS llsCount;]]>
+</sql-query>
+<sql-query id="getPQCCasesCountForLM">
+     <![CDATA[SELECT (SELECT COUNT(*) FROM   lm_search_article where article_status = "Submitted For PQC") AS pubmedCount,
+                    (SELECT COUNT(*)  FROM   lm_springer_article where article_status = "Submitted For PQC") AS adisinsightCount,
+                    (SELECT COUNT(*)  FROM   lm_lls_articles where article_status = "Submitted For PQC") AS llsCount;]]>
+</sql-query>
+<sql-query id="getCasesByValidity">
+     <![CDATA[SELECT count(*) as count, 'Rejected' as name FROM cms_cases WHERE isCaseValid = ? and caseStatus = 'Rejected' and caseManageStatus !='CASEINTAKE_REJECTION' ;]]>
+</sql-query>
+<sql-query id="getHealthAuthCasesByValidity">
+     <![CDATA[SELECT count(*) as count, 'Rejected' as name FROM cms_cases_health_authority WHERE acceptance = ?;]]>
+</sql-query>
+<sql-query id="getLiteraturePubmedADRCases">
+     <![CDATA[SELECT id, article_status, result_title as title, sourced_date as recievedDate, reference_number, xmlfile, argus_number from lm_search_article where article_status = ?;]]>
+</sql-query>
+<sql-query id="getLiteratureAdisinsightADRCases">
+     <![CDATA[SELECT id, article_status, artcile_title as title, sourcedate as recievedDate, reference_number, xmlfile, argus_number from lm_springer_article where article_status = ?;]]>
+</sql-query>
+<sql-query id="getLiteratureLLSADRCases">
+     <![CDATA[SELECT id, article_status, report_title as title, day_zero as recievedDate, reference_number, xmlfile, argus_number from lm_lls_articles where article_status = ?;]]>
+</sql-query>
+
+<sql-query id="getPUBMEDSafetyReportIdById">
+     <![CDATA[SELECT id, reference_number, safetyReportId from lm_search_article WHERE reference_number = ?;]]>
+</sql-query>
+<sql-query id="getADISINSIGHTSafetyReportIdById">
+     <![CDATA[SELECT id, reference_number, safetyReportId from lm_springer_article WHERE reference_number = ?;]]>
+</sql-query>
+<sql-query id="getLLSSafetyReportIdById">
+     <![CDATA[SELECT id, reference_number, safetyReportId from lm_lls_articles WHERE reference_number = ?;]]>
+</sql-query>
+
+<sql-query id="updatePUBMEDArgusNumberById">
+     <![CDATA[UPDATE lm_search_article SET argus_number = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updateADISINSIGHTArgusNumberById">
+     <![CDATA[UPDATE lm_springer_article SET argus_number = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updateLLSArgusNumberById">
+     <![CDATA[UPDATE lm_lls_articles SET argus_number = ? WHERE id = ?;]]>
+</sql-query>
+
+<sql-query id="getTotalCases">
+     <![CDATA[SELECT * from cms_cases WHERE caseManageStatus = ?;]]>
+</sql-query>
+<sql-query id="getCaseFolloeupVersion">
+     <![CDATA[SELECT substring_index (version,'-',-1) AS version from cms_cases WHERE version LIKE ?;]]>
+</sql-query>
+<sql-query id="getCaseExistsFromMailSubject">
+     <![CDATA[SELECT id FROM cms_cases WHERE concat(' ', ? , ' ') like concat('% ', registrationId, ' %');]]>
+</sql-query>
+<sql-query id="getCaseExistsFromMailSubjectDesc">
+     <![CDATA[SELECT id FROM cms_cases WHERE caseSubject = ? and caseDescription = ?;]]>
+</sql-query>
+<sql-query id="getTotalCases">
+     <![CDATA[SELECT count(*) as count FROM cms_cases;]]>
+</sql-query>
+<sql-query id="getCaseFaqsById">
+     <![CDATA[SELECT caseFaqId FROM cms_cases WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getFaqByCaseId">
+     <![CDATA[SELECT * FROM cms_cases WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getFaqSearch">
+     <![CDATA[SELECT * FROM cms_case_faq WHERE faqProductId = ? AND formulationId = ? and active = true and caseId is null;]]>
+</sql-query>
+<sql-query id="getFAQCountsInitiator">
+     <![CDATA[SELECT
+          COALESCE(sum(case when faqStatus = "FAQ_PENDING_INITIATED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS pending,
+          COALESCE(sum(case when faqStatus = "FAQ_INITIATED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS submitted,    
+          COALESCE(sum(case when faqStatus = "FAQ_APPROVED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS approved
+          FROM cms_case_faq ]]>
+</sql-query>
+<sql-query id="getFAQCountsReviewer">
+     <![CDATA[SELECT
+          COALESCE(sum(case when faqStatus = "FAQ_INITIATED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS pending,
+          COALESCE(sum(case when faqStatus = "FAQ_REVIEWED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS reviewed,    
+          COALESCE(sum(case when faqStatus = "FAQ_APPROVED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS approved
+          FROM cms_case_faq ]]>
+</sql-query>
+<sql-query id="getFAQCountsApprover">
+     <![CDATA[SELECT
+          COALESCE(sum(case when faqStatus = "FAQ_REVIEWED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS pending,  
+          COALESCE(sum(case when faqStatus = "FAQ_APPROVED" and  caseId is null and active = 1 then 1 else 0 end), 0) AS approved
+          FROM cms_case_faq ]]>
+</sql-query>
+<sql-query id="addFaqToCaseById">
+     <![CDATA[UPDATE cms_cases set caseFaqId = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="postCaseHistory">
+      <![CDATA[INSERT INTO cms_case_history(`registrationId`, `version`, `reportedDate`, `routeOfEnquiryId`, `natureOfEnquiryId`,
+      `receievedDate`, `caseSubject`, `caseDescription`, `isFollowupRequired`, `isFollowupDone`,  `caseClassification`, `caseStatus`, `productId`) VALUES (?);]]>
+</sql-query>
+<sql-query id="postfollowups">
+     <![CDATA[INSERT INTO cms_case_followups(`caseId`, `state`, `followupRequestedTo`, `followupSubject`, `followupMessage`, `followupFile`, `followupRequestedOn`,
+      `followupRequestedBy`, `createdOn`, `followupType`, `status`) VALUES (?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="postfollowupAnswer">
+     <![CDATA[INSERT INTO cms_case_followups(`caseId`, `followupSubject`, `followupMessage`, `followupRequestedOn`, `createdOn`, `followupType`, `status`) VALUES (?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="updateFollowupStatus">
+     <![CDATA[UPDATE cms_case_followups SET status = ? WHERE caseId = ?;]]>
+</sql-query>
+<sql-query id="getPendingFollowupsRequests">
+     <![CDATA[SELECT *, DATEDIFF(CURDATE()+interval 1 day, DATE_FORMAT(followupRequestedOn, '%Y-%m-%d')) as dayDiff FROM cms_case_followups where followupType = 'FOLLOWUP_QUESTION' and status = 'INITIATED' having dayDiff >= ?;]]>
+</sql-query>
+<sql-query id="getTodaysFollowupAlerts">
+     <![CDATA[SELECT * FROM cms_case_followups WHERE DATE_FORMAT(followupRequestedOn, '%Y-%m-%d') = ? and followupType = 'FOLLOWUP_SCHEDULED';]]>
+</sql-query>
+<sql-query id="getCaseDetails">
+     <![CDATA[SELECT cs.*, cr.name as source from cms_cases cs
+     left join cms_route_of_enquiry cr on cr.id = cs.routeOfEnquiryId
+     where cs.id = ?;]]>
+</sql-query>
+<sql-query id="getcaselogbyid">
+     <![CDATA[SELECT * FROM cms_case_log where caseId = ?;]]>
+</sql-query>
+<sql-query id="postfaq">
+     <![CDATA[INSERT INTO cms_case_faq(`caseId`, `faqAnswer`, `faqQuestion`, `faqStatus`, `version`, `primaryFAQId`, `active`, `createdOn`, `createdBy`,`faqProductId`, `formulationId`) VALUES (?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="updateFaqActive">
+     <![CDATA[UPDATE cms_case_faq SET active = false WHERE primaryFAQId = ?;]]>
+</sql-query>
+<sql-query id="updateFaqPrimaryId">
+     <![CDATA[UPDATE cms_case_faq SET primaryFAQId = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getfaqs">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId)
+]]>
+</sql-query>
+<sql-query id="getfaqsbystatus">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     where faqStatus = ? and faq.active = true and caseId is null]]>
+</sql-query>
+<sql-query id="getfaqsbystatusSearch">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     where (faqStatus = ?) AND (faqAnswer LIKE ? || faqQuestion LIKE ?) and faq.active = true and caseId is null]]>
+</sql-query>
+<sql-query id="getpendingFAQforReviewer">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     where (faqStatus = ? || faqStatus = ?)  and faq.active = true and  caseId is null]]>
+</sql-query>
+<sql-query id="getpendingFAQforReviewerSearch">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     where (faqStatus = ? || faqStatus = ?) AND (faqAnswer LIKE ? || faqQuestion LIKE ?)  and faq.active = true and caseId is null]]>
+</sql-query>
+<sql-query id="getfaqssearchInput">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     WHERE (faqAnswer LIKE ? || faqQuestion LIKE ?) and faq.active = true and caseId is null]]>
+</sql-query>
+<sql-query id="getFAQById">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     where primaryFAQId = ?;]]>
+</sql-query>
+<sql-query id="getFAQByIds">
+     <![CDATA[SELECT faq.*,product.productName,
+     (SELECT GROUP_CONCAT(formulation.formulationName) FROM cms_product_formulations formulation
+     WHERE FIND_IN_SET(formulation.id, faq.formulationId)) as formulationNames
+     FROM cms_case_faq faq
+     LEFT OUTER JOIN cms_argus_product_dictionary product on FIND_IN_SET(product.id,faq.faqProductId) 
+     WHERE FIND_IN_SET(faq.id, (SELECT caseFaqId FROM cms_cases WHERE id = ?));]]>
+</sql-query>
+<sql-query id="updateFaq">
+     <![CDATA[UPDATE cms_case_faq SET faqAnswer = ?, faqQuestion = ?, faqStatus = ?, formulationId = ?, active = ?, modifiedOn = ?, modifiedBy = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="postdocument">
+     <![CDATA[INSERT INTO cms_documents(`filename`, `documentTitle`, `documentDescription`, `documentStatus`, `createdOn`, `createdBy`) VALUES (?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="postcasecomment">
+     <![CDATA[INSERT INTO cms_case_comments(`caseId`, `comment`, `commentedRoleId`, `commentedUserId`, `createdOn`, `createdBy`) VALUES (?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="getcasecomment">
+     <![CDATA[SELECT cc.*,cr.name as commentby FROM cms_case_comments cc inner join cms_role cr on cc.commentedRoleId = cr.id where cc.caseId = ?;]]>
+</sql-query>
+<sql-query id="getinitiatortoassigncase">
+     <![CDATA[SELECT count(cc.id) as count, cu.id as id, cu.username, cr.caseStatusId FROM cms_user cu 
+               left join cms_cases cc on cu.id = cc.initiatedBy and caseStatus = 'open' and caseManageStatus = 'CASEINTAKE_INITIATED'
+               left join cms_role cr on cr.id = cu.user_role_id WHERE cu.active = 1 group by cu.id having cr.caseStatusId IN(1);]]>
+</sql-query>
+<sql-query id="getreviewertoassigncase">
+     <![CDATA[SELECT count(cc.id) as count, cu.id as id, cu.username, cr.caseStatusId FROM cms_user cu 
+               left join cms_cases cc on cu.id = cc.assignedTo and caseStatus = 'open' and caseManageStatus IN ('CASEINTAKE_ASSIGNED','MEDICALENQURIY_ASSIGNED','CASEINTAKE_REJECTION')
+               left join cms_role cr on cr.id = cu.user_role_id WHERE cu.active = 1 group by cu.id having cr.caseStatusId IN(2);]]>
+</sql-query>
+<sql-query id="getapprovertoassigncase">
+     <![CDATA[SELECT count(cc.id) as count, cu.id as id, cu.username, cr.caseStatusId FROM cms_user cu 
+               left join cms_cases cc on cu.id = cc.approvedBy and caseStatus = 'open' and caseManageStatus = 'MEDICALENQUIRY_REVIEWED'
+               left join cms_role cr on cr.id = cu.user_role_id WHERE cu.active = 1 group by cu.id having cr.caseStatusId IN(4);]]>
+</sql-query>
+<sql-query id="getMedicalReviewerToassigncase">
+     <![CDATA[SELECT count(cc.id) as count, cu.id as id, cu.username, cr.caseStatusId FROM cms_user cu 
+               left join cms_cases cc on cu.id = cc.medicalReviewBy and caseStatus = 'open' and caseManageStatus = 'MEDICALENQUIRY_FAQ_REVIEW'
+               left join cms_role cr on cr.id = cu.user_role_id WHERE cu.active = 1 group by cu.id having cr.caseStatusId IN(5);]]>
+</sql-query>
+<sql-query id="caseassign">
+     <![CDATA[UPDATE cms_cases SET assignedBy = ?, assignedTo = ?, assignedOn = ?, caseManageStatus = ?, modifiedDate = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="caseassignToApprover">
+     <![CDATA[UPDATE cms_cases SET assignedToApproverBy = ?, approvedBy = ?, approverOn = ?, modifiedDate = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="caseassignToMedicalReviewer">
+     <![CDATA[UPDATE cms_cases SET assignedToMedicalReviewBy = ?, medicalReviewBy = ?, medicalReviewOn = ?, modifiedDate = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="postReporterToCase">
+     <![CDATA[INSERT INTO cms_case_reporter_details(`caseId`, `reportedBy`, `reporterSalutation`, `reporterName`, `reporterEmail`,
+      `reporterFax`, `reporterPhone`, `reporterCountry`, `reporterContactMethod`, `isReporterDrugRegulatorAuthority`,  `regulatoryAuthorityName`, `otherReportedBy`, `isPrimaryReporter`, `createdBy`, `createdOn`, `reporterState`, `reporterStreet`, `reporterPostalCode`, `reporterCity`, `ishealthcareprofessional`, `reporterAddress`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="getReportersByCaseId">
+     <![CDATA[SELECT * FROM cms_case_reporter_details WHERE caseId = ?;]]>
+</sql-query>
+<sql-query id="deleteReporterById">
+     <![CDATA[DELETE FROM cms_case_reporter_details WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getReportersDetailsByCaseId">
+     <![CDATA[SELECT cc.*, (select country_code from cms_countries where id = cc.reporterCountry) as reporterCountryCode FROM cms_case_reporter_details cc WHERE cc.caseId = ?;]]>
+</sql-query>
+<sql-query id="getReportersDetailsByCaseIdAll">
+     <![CDATA[SELECT cc.*, ce.name as reporterOccupation, cre.name as reporterContactMethodName, ccc.country_name as reporterCountryName,
+     CASE WHEN cc.isPrimaryReporter = 1 THEN "Yes" ELSE "No" END as isPrimaryReporter
+     FROM cms_case_reporter_details cc 
+     LEFT OUTER JOIN cms_enquirers ce on ce.id = cc.reportedBy
+     LEFT OUTER JOIN cms_route_of_enquiry cre on cre.id = cc.reporterContactMethod
+     LEFT OUTER JOIN cms_countries ccc on ccc.id = cc.reporterCountry
+     WHERE cc.caseId = ?;]]>
+</sql-query>
+
+<sql-query id="postSaveFollowupDetails">
+     <![CDATA[INSERT INTO cms_case_followups(`caseId`, `followupRequestedTo`, `followupRequestedOn`, `followupType`,`status`) VALUES (?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="postFollowupScheduleDetails">
+     <![CDATA[INSERT INTO cms_case_followups(`caseId`, `followupRequestedTo`, `followupRequestedOn`, `followupType`,`status`) VALUES (?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="getADRconfigDetails">
+     <![CDATA[SELECT cac.*, coi.companyName, coi.companyCode, coi.companyAddress from cms_adr_config cac JOIN cms_org_info coi LIMIT 1;]]>
+</sql-query>
+<sql-query id="getCasemanageStatusByModuleId">
+     <![CDATA[SELECT cs.* FROM cms_case_status cs
+               left outer join cms_role cr on  FIND_IN_SET(cs.id, cr.caseStatusId)
+               where FIND_IN_SET(?, cs.moduleId) and cr.id = ?
+     ]]>
+</sql-query>
+<sql-query id="updateCaseReporter">
+     <![CDATA[UPDATE cms_case_reporter_details SET `reportedBy` = ?, `reporterSalutation` = ?, `reporterName` = ?, `reporterEmail` = ?, `reporterFax` = ?, `reporterPhone` = ?, `reporterCountry` = ?, `reporterContactMethod` = ?, `isReporterDrugRegulatorAuthority` = ?, `regulatoryAuthorityName` = ?, `otherReportedBy` = ?, `isPrimaryReporter` = ?, `reporterState` = ?, `reporterStreet` = ?, `reporterPostalCode` = ?, `reporterCity` = ?, `ishealthcareprofessional` = ?, `reporterAddress` = ?, `modifiedBy` = ?, `modifiedOn` = ? where caseId = ? and id = ?;]]>
+</sql-query>
+<sql-query id="getCaseReporterDetails">
+     <![CDATA[SELECT * FROM cms_case_reporter_details where caseId = ?;]]>
+</sql-query>
+
+<sql-query id="getMailTemplates">
+     <![CDATA[SELECT * FROM cms_templates;]]>
+</sql-query>
+
+<sql-query id="postMailTemplates">
+     <![CDATA[INSERT INTO cms_templates(`id`, `templateName`, `templateDescription`, `subject`, `body`) VALUES (?,?,?,?,?);]]>
+</sql-query>
+
+
+<sql-query id="updateMailTemplates">
+     <![CDATA[UPDATE  cms_templates SET  `templateName` = ? , `templateDescription` = ?, `subject` = ?, `body` = ?   where id = ?]]>
+</sql-query>
+
+<sql-query id="postDocuments">
+     <![CDATA[INSERT INTO cms_documents(`filename`,`documentStatus`, `documentTitle`, `documentDescription`, `createdOn`, `createdBy`) VALUES (?,?,?,?,?,?);]]>
+</sql-query>
+<sql-query id="getDocumentsByStatus">
+     <![CDATA[SELECT * FROM cms_documents WHERE documentStatus = ?;]]>
+</sql-query>
+<sql-query id="getDocumentsByStatusSearch">
+     <![CDATA[SELECT * FROM cms_documents WHERE documentStatus = ? AND (documentTitle LIKE ? || documentDescription LIKE ?)]]>
+</sql-query>
+<sql-query id="getpendingDocforReviewer">
+     <![CDATA[SELECT * FROM cms_documents WHERE (documentStatus = ? || documentStatus = ?);]]>
+</sql-query>
+<sql-query id="getpendingDocforReviewerSearch">
+     <![CDATA[SELECT * FROM cms_documents WHERE (documentStatus = ? || documentStatus = ?) AND (documentTitle LIKE ? || documentDescription LIKE ?);]]>
+</sql-query>
+<sql-query id="getDocuments">
+     <![CDATA[SELECT * FROM cms_documents;]]>
+</sql-query>
+<sql-query id="getDocumentsRepoSearch">
+     <![CDATA[SELECT * FROM cms_documents WHERE (documentTitle LIKE ? || documentDescription LIKE ?)]]>
+</sql-query>
+<sql-query id="getDocumentsById">
+     <![CDATA[SELECT * FROM cms_documents WHERE id = ?;]]>
+</sql-query>
+<sql-query id="deleteDocsRepo">
+     <![CDATA[UPDATE cms_documents SET `filename` = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="deleteDocumentById">
+     <![CDATA[DELETE FROM cms_documents WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updateDocument">
+     <![CDATA[UPDATE cms_documents SET `filename` = ?, `documentStatus`= ?, `documentTitle`= ?, `documentDescription`= ?, `modifiedOn`= ?, `modifiedBy`= ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updateDocumentWithoutFile">
+     <![CDATA[UPDATE cms_documents SET `documentStatus`= ?, `documentTitle`= ?, `documentDescription`= ?, `modifiedOn`= ?, `modifiedBy`= ? WHERE id = ?;]]>
+</sql-query>
+
+<sql-query id="getMailTemplateById">
+     <![CDATA[SELECT * FROM cms_templates where id = ?;]]>
+</sql-query>
+
+<sql-query id="getUsers">
+     <![CDATA[SELECT * FROM cms_user;]]>
+</sql-query>
+
+<sql-query id="getactiveInactiveRoles">
+     <![CDATA[SELECT * from cms_role where active != 2 and isMasterRole is null;]]>
+</sql-query>
+
+<sql-query id="getRoleByStatus">
+     <![CDATA[SELECT * from cms_role where active = ? and isMasterRole is null;]]>
+</sql-query>
+
+<sql-query id="getRoleByStatusManageForm">
+     <![CDATA[SELECT cr.*, cs.recieveCaseStatus FROM cms_role cr
+left outer join cms_case_status cs on cr.caseStatusId IN(cs.id) group by cr.id having caseStatusId IN (1,2,3) and cr.isMasterRole is null order by cr.name;]]>
+</sql-query>
+
+<sql-query id="getRoleById">
+     <![CDATA[SELECT id, name, description, level from cms_role where id = ? and isMasterRole is null;]]>
+</sql-query>
+
+<sql-query id="getActiveInactiveUsers">
+     <![CDATA[SELECT cms_role.name as rolename, cms_user.* FROM cms_user LEFT JOIN cms_role on cms_user.user_role_id = cms_role.id where cms_user.active not in  (0,3) ORDER BY active ASC;]]>
+</sql-query> 
+
+<sql-query id="getUserById">
+     <![CDATA[SELECT id,user_role_id,email,username, active,userId, departmentId, plantId, companyName from cms_user where id = ?;]]>
+</sql-query> 
+
+<sql-query id="getDeactivatedUsers">
+     <![CDATA[SELECT cms_role.name as rolename, cms_user.* FROM cms_user LEFT JOIN cms_role on cms_user.user_role_id = cms_role.id where cms_user.active in  (0,3);]]>
+</sql-query> 
+
+<sql-query id="getDepartmentById">
+     <![CDATA[SELECT id, dept_name, dept_description, active from cms_departments where id = ?;]]>
+</sql-query>
+
+<sql-query id="getUserRoles">
+     <![CDATA[SELECT * from cms_role WHERE isMasterRole is null;]]>
+</sql-query>
+
+<sql-query id="getUserRolesCustomCaseIntake">
+     <![CDATA[SELECT cr.*, cs.recieveCaseStatus FROM cms_user cu
+left outer join cms_role cr on cr.id = cu.user_role_id 
+left outer join cms_case_status cs on cr.caseStatusId IN(cs.id) group by cu.user_role_id having masterRoleId IN (1,2) order by cr.name;]]>
+</sql-query>
+
+<sql-query id="getUserRolesCustomMedicalEnquiry">
+     <![CDATA[SELECT cr.*, cs.recieveCaseStatus FROM cms_user cu
+left outer join cms_role cr on cr.id = cu.user_role_id 
+left outer join cms_case_status cs on cr.caseStatusId IN(cs.id) group by cu.user_role_id having masterRoleId IN (2,3) order by cr.name;]]>
+</sql-query>
+
+<sql-query id="getPlants">
+     <![CDATA[SELECT * from cms_plants WHERE active = 1;]]>]>
+</sql-query>
+
+<sql-query id="getActivePlants">
+     <![CDATA[SELECT * FROM cms_plants WHERE active = 1 ORDER BY id desc;]]>]>
+</sql-query>
+
+<sql-query id="getInActivePlants">
+     <![CDATA[SELECT * FROM cms_plants WHERE active = 0 ORDER BY id desc;]]>]>
+</sql-query>
+
+<sql-query id="getPlantById">
+     <![CDATA[SELECT id, plant_name,plant_location,active from cms_plants where id = ?;]]>
+</sql-query>
+
+<sql-query id="postPlants">
+     <![CDATA[INSERT INTO cms_plants(plant_name,plant_location, active)VALUES (?,?,?);]]>
+</sql-query>
+
+<sql-query id="plantExistancyCheck">
+     <![CDATA[SELECT * FROM cms_plants WHERE plant_name = ? AND plant_location = ?;]]>
+</sql-query>
+
+<sql-query id="putPlant">
+     <![CDATA[update cms_plants SET ? where id = ? ;]]>
+</sql-query>
+
+<sql-query id="activateDeactivatePlant">
+     <![CDATA[update cms_plants SET active = ? where id = ?;]]>
+</sql-query>
+     
+<sql-query id="DeactivatePlant">
+     <![CDATA[update cms_plants SET active = ?  where id = ?;]]>
+</sql-query> 
+
+<sql-query id="getDepartments">
+     <![CDATA[SELECT * from cms_departments]]>
+</sql-query>
+
+<sql-query id="getAllDepartments">
+     <![CDATA[SELECT * from cms_departments where active = ? ORDER BY id desc;]]>
+</sql-query>
+
+<sql-query id="deactivateDepartment">
+     <![CDATA[update cms_departments SET active = ? where id = ?;]]>
+</sql-query>  
+
+<sql-query id="getActiveInactiveDepartment">
+     <![CDATA[SELECT * from cms_departments where active != 2  ORDER BY id desc;]]>
+</sql-query>
+
+<sql-query id="postDepartment">
+     <![CDATA[INSERT INTO cms_departments(dept_name,dept_description,created_on,created_by,active) values(?,?,?,?,?);]]>;]]>
+</sql-query>
+
+<sql-query id="departmentExistancyCheck">
+     <![CDATA[SELECT * FROM cms_departments WHERE dept_name = ? AND dept_description = ?;]]>
+</sql-query>
+
+<sql-query id="putDepartment">
+     <![CDATA[update cms_departments SET  ? where id = ?;]]>
+</sql-query>
+
+<sql-query id="activateDeactivateDepartment">
+     <![CDATA[update cms_departments SET active = ? where id = ?;]]>
+</sql-query>
+
+
+
+<sql-query id="postUser">
+     <![CDATA[INSERT INTO cms_user(plantId,active,initialLogin,userId,username,email,user_role_id,departmentId,password,passwordSalt,companyName,activeDate,activeStatus)VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+
+
+<sql-query id="getPermissionByRoleId">
+       <![CDATA[SELECT cm.moduleName,cm.id as moduleId, crp.id as crpId, cp.permissions_display_name as permissionName,cp.id as permissionId, ifnull(crp.role_id,0) AS checked
+from cms_permissions cp inner join cms_modules cm on cm.id=cp.moduleid and FIND_IN_SET(?, cp.permission_assign_to) 
+LEFT join cms_role_permissions crp on  FIND_IN_SET(cp.id, crp.permission_ids) AND crp.role_id in (?);]]>
+</sql-query> 
+
+<sql-query id="updateRolePermissions">
+     <![CDATA[UPDATE cms_role_permissions set permission_ids = ? WHERE id = ?;]]>
+</sql-query>
+
+<sql-query id="updateRoleName">
+     <![CDATA[UPDATE cms_role set name = ? WHERE id = ?;]]>
+</sql-query>
+
+<sql-query id="getReports">
+     <![CDATA[SELECT * FROM cms_cases where receievedDate between ? and ? and routeOfEnquiryId = ? and productId in (?);]]>
+</sql-query> 
+<sql-query id="createRole">
+     <![CDATA[INSERT INTO cms_role (name, caseStatusId, masterRoleId, active) VALUES(?,?,?,'1');]]>
+</sql-query>
+
+<sql-query id="roleExistancy">
+     <![CDATA[SELECT * FROM cms_role WHERE name = ? and active = '1' and isMasterRole is null;]]>
+</sql-query>
+
+<sql-query id="createRolePermissions">
+     <![CDATA[INSERT INTO cms_role_permissions (role_id, permission_ids, active) VALUES(?,?,'1')]]>
+</sql-query>
+<sql-query id="postLoginTime">
+         <![CDATA[insert into cms_login_history (user_id,emailId,last_login_time,ip_address,login_key, created_on
+        ) values(?,?,?,?,?,?);]]>
+</sql-query>  
+
+<sql-query id="getAuditTrailsCase">
+     <![CDATA[SELECT * FROM cms_audit_trails WHERE typeOfAudit = ? and createdOn between ? and ? order by caseId, createdOn;]]>
+</sql-query>
+<sql-query id="getAuditTrails">
+     <![CDATA[SELECT * FROM cms_audit_trails WHERE typeOfAudit = ? and createdOn between ? and ? order by createdOn;]]>
+</sql-query>
+
+<sql-query id="getCaseAuditTrails">
+     <![CDATA[SELECT * FROM cms_case_audits WHERE caseId = ? order by caseId, createdOn;]]>
+</sql-query>
+
+<sql-query id="checkNewUser">
+     <![CDATA[SELECT * FROM cms_user WHERE userId = ?;]]>
+</sql-query>
+
+<sql-query id="saveAuditTrailsData">
+     <![CDATA[INSERT INTO cms_audit_trails (userId,userName,activity,remarks,ipAddress,typeOfAudit, createdOn, caseId) values(?,?,?,?,?,?,?,?);]]>
+</sql-query>  
+
+
+ <sql-query id="putUser">
+        <![CDATA[update cms_user SET  ? where id = ?;]]>
+    </sql-query> 
+     <sql-query id="deActivateUser">
+     <![CDATA[update cms_user SET active = ? where id = ?;]]>
+    </sql-query> 
+    <sql-query id="activateUser">
+     <![CDATA[update cms_user SET active = ?, loginAttempts = ? where userId = ?;]]>
+    </sql-query>
+    <sql-query id="activateUserAccount">
+     <![CDATA[update cms_user SET active = ?, loginAttempts = ?, requestForPasswordCount = ? where userId = ?;]]>
+    </sql-query>
+
+    
+
+<sql-query id="updateLoginHistory">     
+    <![CDATA[update cms_login_history SET last_logout_time = ? where login_key = ?]]>
+</sql-query>
+<sql-query id="userLogoutStatus">
+     <![CDATA[UPDATE cms_user SET ? where userId = ?;]]>
+</sql-query>
+    
+ <sql-query id="getpasswordByUsername">
+     <![CDATA[SELECT * from cms_user where userId=?;]]>
+</sql-query> 
+<sql-query id="getCaseFormFields">
+     <![CDATA[select cfm.* from cms_case_form_fields cfm inner join cms_role cr on cr.caseStatusId IN(cfm.roleId) WHERE cr.id = ? and cfm.isRequiredTovalidate = 1;]]>
+</sql-query>
+<sql-query id="getCaseFormFields1">
+     <![CDATA[select * from cms_case_form_fields WHERE roleId = ? AND inputSourceId = ? and isRequiredTovalidate = 1;]]>
+</sql-query>
+<sql-query id="updateCaseFormFields">
+     <![CDATA[UPDATE cms_case_form_fields SET isEditable = ?, isRequired = ? WHERE id = ? AND roleId = ?;]]>
+</sql-query> 
+ <sql-query id="getPasswordRequestById">
+   <![CDATA[select * from cms_password_history where userId = ?;]]>
+   </sql-query>
+<sql-query id="getRequestById">
+<![CDATA[select * from cms_password_request where id = ? and user_request = ?;]]>
+</sql-query>
+<sql-query id="updatePasswordRequestStatus">
+<![CDATA[UPDATE cms_password_request SET active = ? where id = ?;]]>
+</sql-query>
+
+<sql-query id="updatePasswordRequest">
+   <![CDATA[update cms_password_request SET ? where userId = ? AND user_request = 'FORGOT PASSWORD';]]>
+</sql-query>
+
+<sql-query id="updateUserAccountUnlockRequest">
+   <![CDATA[update cms_password_request SET active = ? where userId = ? AND user_request = 'USER ACCOUNT UNLOCK';]]>
+</sql-query>
+<!-- END -->
+
+<!-- password related queries -->
+  <sql-query id="getUserByUserId">
+        <![CDATA[SELECT * from cms_user where userId = ?;]]>
+    </sql-query> 
+    <sql-query id="getCMSUserById">
+        <![CDATA[SELECT * from cms_user where id = ?;]]>
+    </sql-query> 
+    <sql-query id="getSourceNameById">
+        <![CDATA[SELECT name from cms_route_of_enquiry where id = ?;]]>
+    </sql-query> 
+    <sql-query id="updateUser">
+     <![CDATA[UPDATE cms_user SET ? where id=?;]]>
+    </sql-query>
+ <sql-query id="updateUserByUserId">
+     <![CDATA[UPDATE cms_user SET ? where userId=?;]]>
+    </sql-query> 
+    <sql-query id="verifyPassword">
+     <![CDATA[SELECT * from cms_user where userId = ?;]]>
+    </sql-query>
+     <sql-query id="getPolicySettings">
+         <![CDATA[SELECT * from cms_policy_settings;]]>
+    </sql-query>
+      <sql-query id="getUserPasswords">
+        <![CDATA[SELECT * from cms_password_history where old_password = ? and userId = ?;]]>
+    </sql-query> 
+      <sql-query id="getSecurityQuestions">
+     <![CDATA[SELECT * FROM cms_security_questions;]]>
+    </sql-query>
+
+     <sql-query id="postPassword_request">
+   <![CDATA[INSERT INTO cms_password_request (userId,user_request,remark,active, created_on) 
+   VALUES (?,?,?,?,?);]]>
+   </sql-query>  
+    <sql-query id="getPasswordRequests">
+   <![CDATA[select * from cms_password_request where active = 1 and user_request = ?;]]>
+   </sql-query>
+    <sql-query id="updatepassword">
+     <![CDATA[UPDATE cms_user SET ? where id=?;]]>
+    </sql-query> 
+     <sql-query id="postPassword">
+        <![CDATA[insert into cms_password_history (userId, old_password,new_password,created_on
+        ) values(?,?,?,?);]]>
+    </sql-query> 
+      <sql-query id="getpasswordByUserId">
+     <![CDATA[select * from cms_user where userId=?;]]>
+    </sql-query> 
+    <!-- END -->
+    <!-- audit trails  -->
+     <sql-query id="getAllAuditTrails">
+         <![CDATA[select * from cms_audit_trails;]]>
+    </sql-query> 
+    <!-- END -->
+
+    <!-- login-logout history -->
+     <sql-query id="getLoginHistory">
+         <![CDATA[select * from cms_login_history where created_on between? and ?;]]>
+    </sql-query>  
+    <!-- END -->
+
+     <sql-query id="getFormulations">
+          <![CDATA[SELECT * FROM cms_product_formulations;]]>
+     </sql-query>
+    
+    <sql-query id="postMIForm">
+     <![CDATA[INSERT INTO cms_cases(`reportedDate`, `registrationId`,`routeOfEnquiryId`, `caseClassification`,
+      `productId`, `createdDate`,`caseManageStatus`,`initiatedBy`, `caseSubject`, `isCaseValid`, `version`, `receievedDate`, `caseStatus`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+     </sql-query>
+
+     <sql-query id="getFormulations">
+          <![CDATA[SELECT * FROM cms_product_formulations;]]>
+     </sql-query>
+
+     <sql-query id="getReportsCols">
+          <![CDATA[SELECT * FROM cms_case_form_fields where isReportField = 1 GROUP BY fieldName order by id;]]>
+     </sql-query>
+
+     <sql-query id="getReportData">
+          <![CDATA[SELECT
+                    c.*,
+                    cc.country_name as countryName,
+                    cc.country_code as countryCode,
+                    cre.name as routeOfEnquiryId,
+                    cre.type as routeOfEnquiryType,
+                    cne.name as natureOfEnquiryId,
+                    csrd.reportedBy, csrd.reporterSalutation, csrd.reporterName, csrd.reporterEmail, csrd.reporterEmail as primaryReporterEmail, csrd.reporterFax, csrd.reporterPhone, csrd.reporterState, csrd.reporterCountry, csrd.reporterStreet, csrd.reporterPostalCode, csrd.reporterCity, csrd.ishealthcareprofessional, csrd.reporterAddress, csrd.reporterContactMethod, csrd.isReporterDrugRegulatorAuthority, csrd.regulatoryAuthorityName, csrd.otherReportedBy, csrd.isPrimaryReporter,
+                    (CASE WHEN csrd.isPrimaryReporter = 1 THEN 'Yes' WHEN csrd.isPrimaryReporter = 0 THEN 'No' WHEN csrd.isPrimaryReporter is null THEN '' END) as isPrimaryReporter,
+                    (CASE WHEN c.isCaseValid = 1 THEN 'Accepted' WHEN c.isCaseValid = 0 THEN 'Rejected' WHEN c.isCaseValid is null THEN '' END) as isCaseValid,
+                    (CASE WHEN c.isReportisSamePatient = 1 THEN 'Yes' WHEN c.isReportisSamePatient = 0 THEN 'No' WHEN c.isReportisSamePatient is null THEN '' END) as isReportisSamePatient,
+                    (CASE WHEN c.isFollowupRequired = 1 THEN 'Yes' WHEN c.isFollowupRequired = 0 THEN 'No' WHEN c.isFollowupRequired is null THEN '' END) as isFollowupRequired,
+                    (CASE WHEN c.isContractTreatingPhysician = 1 THEN 'Yes' WHEN c.isContractTreatingPhysician = 0 THEN 'No' WHEN c.isContractTreatingPhysician is null THEN '' END) as isContractTreatingPhysician,
+                    (CASE WHEN c.isFollowupDone = 1 THEN 'Yes' WHEN c.isFollowupDone = 0 THEN 'No' WHEN c.isFollowupDone is null THEN '' END) as isFollowupDone,
+                    (CASE WHEN c.patientGender = 'M' THEN 'Male' WHEN c.patientGender = 'F' THEN 'Female' WHEN c.patientGender is null THEN '' END) as patientGender,
+                    (CASE WHEN c.isPatientisbaby = 1 THEN 'Yes' WHEN c.isPatientisbaby = 0 THEN 'No' WHEN c.isPatientisbaby is null THEN '' END) as isPatientisbaby,
+                    (CASE WHEN c.isoutcomefatal = 1 THEN 'Yes' WHEN c.isoutcomefatal = 0 THEN 'No' WHEN c.isoutcomefatal is null THEN '' END) as isoutcomefatal,
+                    (CASE WHEN c.studyInfoAvailable = 1 THEN 'Yes' WHEN c.studyInfoAvailable = 0 THEN 'No' WHEN c.studyInfoAvailable is null THEN '' END) as studyInfoAvailable,
+                    (CASE WHEN csrd.ishealthcareprofessional = 1 THEN 'Yes' WHEN csrd.ishealthcareprofessional = 0 THEN 'No' WHEN csrd.ishealthcareprofessional is null THEN '' END) as ishealthcareprofessional,
+                    (CASE WHEN csrd.isReporterDrugRegulatorAuthority = 1 THEN 'Yes' WHEN csrd.isReporterDrugRegulatorAuthority = 0 THEN 'No' WHEN isReporterDrugRegulatorAuthority is null THEN '' END) as isReporterDrugRegulatorAuthority,
+                    (
+                         CASE
+                         WHEN
+                              c.patientAgegroup = '1'
+                         THEN
+                              'Neonate'
+                         WHEN
+                              c.patientAgegroup = '2'
+                         THEN
+                              'Infant'
+                         WHEN
+                              c.patientAgegroup = '3'
+                         THEN
+                              'Child'
+                         WHEN
+                              c.patientAgegroup = '4'
+                         THEN
+                              'Adolescent'
+                         WHEN
+                              c.patientAgegroup = '5'
+                         THEN
+                              'Adult'
+                         WHEN
+                              c.patientAgegroup = '6'
+                         THEN
+                              'Elderly'
+                         ELSE
+                              ''
+                         END
+                    )
+                    AS patientAgegroup,
+                    (
+                         CASE
+                         WHEN
+                              c.caseComplexity = 'P1'
+                         THEN
+                              'Priority 1'
+                         WHEN
+                              c.caseComplexity = 'P2'
+                         THEN
+                              'Priority 2'
+                         WHEN
+                              c.caseComplexity = 'P3'
+                         THEN
+                              'Priority 3'
+                         WHEN
+                              c.caseComplexity = '4'
+                         THEN
+                              'Adolescent'
+                         WHEN
+                              c.caseComplexity = '5'
+                         THEN
+                              'Adult'
+                         ELSE
+                              ''
+                         END
+                    )
+                    AS caseComplexity, 
+                    (select group_concat(name) from cms_case_classifications ccc where find_in_set(ccc.id, c.caseClassification)) as caseClassification,
+                    (select group_concat(productName) from cms_argus_product_dictionary ccp where find_in_set(ccp.id, c.productId)) as productId,
+                    cc.country_name as patientCountry, cc1.country_name as physicianCountry, cc2.country_name as reporterCountry, cu.username as assignedBy, cu1.username as assignedTo, cu2.username 
+     as assignedToApproverBy, cu3.username as approvedBy, cu4.username as reviewedBy, cu5.username as medicalReviewBy, cu6.username as assignedToMedicalReviewBy, cu7.username as acknowledgmentSentBy, ce.name as reportedBy, cre1.name as reporterContactMethod
+                    FROM
+                    cms_cases c
+                    left outer join
+                         cms_countries cc
+                         on cc.id = c.patientCountry
+                    left outer join
+                         cms_countries cc1
+                         on cc1.id = c.physicianCountry
+                    left outer join
+                         cms_route_of_enquiry cre
+                         on cre.id = c.routeOfEnquiryId
+                    left outer join
+                         cms_nature_of_enquiry cne
+                         on cne.id = c.natureOfEnquiryId
+                    left outer join
+                         cms_user cu
+                         on cu.id = c.assignedBy
+                    left outer join
+                         cms_user cu1
+                         on cu1.id = c.assignedTo
+                    left outer join
+                         cms_user cu2
+                         on cu2.id = c.assignedToApproverBy
+                    left outer join
+                         cms_user cu3
+                         on cu3.id = c.approvedBy
+                    left outer join
+                         cms_user cu4
+                         on cu4.id = c.reviewedBy
+                    left outer join
+                         cms_user cu5
+                         on cu5.id = c.medicalReviewBy
+                    left outer join
+                         cms_user cu6
+                         on cu6.id = c.assignedToMedicalReviewBy
+                    left outer join
+                         cms_user cu7
+                         on cu7.id = c.initiatedBy
+                    left outer join
+                         cms_case_reporter_details csrd
+                         on csrd.caseId = c.id
+                    left outer join
+                         cms_enquirers ce
+                         on ce.id = csrd.reportedBy
+                    left outer join
+                         cms_countries cc2
+                         on cc2.id = csrd.reporterCountry
+                    left outer join
+                         cms_route_of_enquiry cre1
+                         on cre1.id = csrd.reporterContactMethod
+                         and cre1.type = 'ContactMethod' where routeOfEnquiryId = ? ]]>
+     </sql-query>
+     <sql-query id="invalidCaseDownloadPDF">
+          <![CDATA[SELECT c.id,c.registrationId,c.isCaseValid,c.reasonForRejection FROM cms_cases c where id = ?;]]>
+     </sql-query>
+
+     <sql-query id="ValidCaseDownloadPDF">
+          <![CDATA[SELECT 
+               c.id,c.id as caseId,c.registrationId,c.isCaseValid,c.version,c.receievedDate,c.reportedDate,
+               cre.name as sourceName,c.caseSubject,c.caseClassification,c.*,
+               CAST(GROUP_CONCAT(DISTINCT classification.name SEPARATOR ',') AS char) as classificationNames,
+               c.caseStatus,c.productId,
+               CAST(GROUP_CONCAT(DISTINCT cp.productName SEPARATOR ',') AS char) as productNames,
+               CAST(GROUP_CONCAT(DISTINCT cd.filename SEPARATOR ',') AS char) as fileNames,
+               c.referenceNumbers,
+               CONCAT_WS(" ",cp.concUnitId, cp.concentration) as strengths,
+               c.caseCloseComment,c.caseDescription,
+               crd.reporterSalutation,crd.reporterName,ce.name as reporterOccupation,
+               crd.reporterEmail,cc.country_name as reporterCountryName,crd.reporterFax,crd.reporterPhone,crd.isPrimaryReporter,
+               crouteEnquiry.name as reporterContactMethodName,
+               crd.isReporterDrugRegulatorAuthority,crd.regulatoryAuthorityName,
+               c.isReportisSamePatient,
+               c.patientName,ca.country_name as patientCountryName,c.patientDateofBirth,c.patientAge,c.patientGender,
+               c.patientHeight,c.patientWeight,c.isContractTreatingPhysician,
+               c.physicianName,c.physicianEmail,c.physicianFax,c.physicianPhone,c.caseComplexity,
+               c.acknowledgmentSentDate,c.acknowledgmentSentBy,
+               cre.name as routeOfEnquiryName,cre.type as routeOfEnquiryType,
+               CAST(GROUP_CONCAT(DISTINCT comments.comment SEPARATOR ',') AS char) as caseComments,
+               CAST(GROUP_CONCAT(DISTINCT comments.commentedRoleId SEPARATOR ',') AS char) as commentedRoleIds,
+               CAST(GROUP_CONCAT(DISTINCT comments.commentedUserId SEPARATOR ',') AS char) as commentedUserIds,
+               CAST(GROUP_CONCAT(DISTINCT comments.respondToReporter SEPARATOR ',') AS char) as respondToReporters,
+               CAST(GROUP_CONCAT(DISTINCT comments.createdOn SEPARATOR ',') AS char) as commentCreatedOns,
+               CAST(GROUP_CONCAT(DISTINCT comments.createdBy SEPARATOR ',') AS char) as commentCreatedBys,
+               CAST(GROUP_CONCAT(DISTINCT cu.username SEPARATOR ',') AS char) as commentCreators,
+               CAST(GROUP_CONCAT(DISTINCT ccf.followupRequestedTo SEPARATOR ',') AS char) as followupRequestedTos,
+               CAST(GROUP_CONCAT(DISTINCT ccf.followupSubject SEPARATOR ',') AS char) as followSubjects,
+               CAST(GROUP_CONCAT(DISTINCT ccf.followUpMessage SEPARATOR ',') AS char) as followUpMessages,
+               CAST(GROUP_CONCAT(DISTINCT ccf.followupFile SEPARATOR ',') AS char) as followupFiles,
+               CAST(GROUP_CONCAT(DISTINCT ccf.followupRequestedOn SEPARATOR ',') AS char) as followupRequestedOns,
+               CAST(GROUP_CONCAT(DISTINCT ccf.followupRequestedBy SEPARATOR ',') AS char) as followupRequestedBys,
+               CAST(GROUP_CONCAT(DISTINCT ccf.createdOn SEPARATOR ',') AS char) as followupCreatedOns,
+               (CASE WHEN crd.isPrimaryReporter = 1 THEN 'Yes' WHEN crd.isPrimaryReporter = 0 THEN 'No' WHEN crd.isPrimaryReporter is null THEN '' END) as isPrimaryReporter,
+               (CASE WHEN c.isCaseValid = 1 THEN 'Accepted' WHEN c.isCaseValid = 0 THEN 'Rejected' WHEN c.isCaseValid is null THEN '' END) as isCaseValid,
+               (CASE WHEN c.isReportisSamePatient = 1 THEN 'Yes' WHEN c.isReportisSamePatient = 0 THEN 'No' WHEN c.isReportisSamePatient is null THEN '' END) as isReportisSamePatient,
+               (CASE WHEN c.isFollowupRequired = 1 THEN 'Yes' WHEN c.isFollowupRequired = 0 THEN 'No' WHEN c.isFollowupRequired is null THEN '' END) as isFollowupRequired,
+               (CASE WHEN c.isContractTreatingPhysician = 1 THEN 'Yes' WHEN c.isContractTreatingPhysician = 0 THEN 'No' WHEN c.isContractTreatingPhysician is null THEN '' END) as isContractTreatingPhysician,
+               (CASE WHEN c.isFollowupDone = 1 THEN 'Yes' WHEN c.isFollowupDone = 0 THEN 'No' WHEN c.isFollowupDone is null THEN '' END) as isFollowupDone,
+               (CASE WHEN c.patientGender = 'M' THEN 'Male' WHEN c.patientGender = 'F' THEN 'Female' WHEN c.patientGender is null THEN '' END) as patientGender,
+               (CASE WHEN c.isPatientisbaby = 1 THEN 'Yes' WHEN c.isPatientisbaby = 0 THEN 'No' WHEN c.isPatientisbaby is null THEN '' END) as isPatientisbaby,
+               (CASE WHEN c.isoutcomefatal = 1 THEN 'Yes' WHEN c.isoutcomefatal = 0 THEN 'No' WHEN c.isoutcomefatal is null THEN '' END) as isoutcomefatal,
+               (CASE WHEN c.studyInfoAvailable = 1 THEN 'Yes' WHEN c.studyInfoAvailable = 0 THEN 'No' WHEN c.studyInfoAvailable is null THEN '' END) as studyInfoAvailable,
+               (CASE WHEN crd.ishealthcareprofessional = 1 THEN 'Yes' WHEN crd.ishealthcareprofessional = 0 THEN 'No' WHEN crd.ishealthcareprofessional is null THEN '' END) as ishealthcareprofessional,
+               (CASE WHEN crd.isReporterDrugRegulatorAuthority = 1 THEN 'Yes' WHEN crd.isReporterDrugRegulatorAuthority = 0 THEN 'No' WHEN crd.isReporterDrugRegulatorAuthority is null THEN '' END) as isReporterDrugRegulatorAuthority,
+               (
+                    CASE
+                    WHEN
+                         c.patientAgegroup = '1'
+                    THEN
+                         'Neonate'
+                    WHEN
+                         c.patientAgegroup = '2'
+                    THEN
+                         'Infant'
+                    WHEN
+                         c.patientAgegroup = '3'
+                    THEN
+                         'Child'
+                    WHEN
+                         c.patientAgegroup = '4'
+                    THEN
+                         'Adolescent'
+                    WHEN
+                         c.patientAgegroup = '5'
+                    THEN
+                         'Adult'
+                    WHEN
+                         c.patientAgegroup = '6'
+                    THEN
+                         'Elderly'
+                    ELSE
+                         ''
+                    END
+               )
+               AS patientAgegroup,
+               (
+                    CASE
+                    WHEN
+                         c.caseComplexity = 'P1'
+                    THEN
+                         'Priority 1'
+                    WHEN
+                         c.caseComplexity = 'P2'
+                    THEN
+                         'Priority 2'
+                    WHEN
+                         c.caseComplexity = 'P3'
+                    THEN
+                         'Priority 3'
+                    WHEN
+                         c.caseComplexity = '4'
+                    THEN
+                         'Adolescent'
+                    WHEN
+                         c.caseComplexity = '5'
+                    THEN
+                         'Adult'
+                    ELSE
+                         ''
+                    END
+               )
+               FROM cms_cases c
+               LEFT OUTER JOIN cms_case_comments comments on c.id = comments.caseId
+               LEFT OUTER JOIN cms_case_reporter_details crd on c.id = crd.caseId
+               LEFT OUTER JOIN cms_countries ca on c.patientCountry = ca.id
+               LEFT OUTER JOIN cms_countries cb on c.physicianCountry = cb.id
+               LEFT OUTER JOIN cms_countries cc on crd.reporterCountry = cc.id
+               LEFT OUTER JOIN cms_documents cd on c.id = cd.caseId
+               LEFT OUTER JOIN cms_route_of_enquiry cre on c.routeOfEnquiryId = cre.id
+               LEFT OUTER JOIN cms_argus_product_dictionary cp on FIND_IN_SET(cp.id, c.productId)
+               LEFT OUTER JOIN cms_documents cdocs on FIND_IN_SET(c.caseSourceDocumentIds, cdocs.id)
+               LEFT OUTER JOIN cms_route_of_enquiry crouteEnquiry on FIND_IN_SET(crouteEnquiry.id,crd.reporterContactMethod)
+               LEFT OUTER JOIN cms_case_followups ccf on ccf.caseId = c.id and (ccf.followupType = "RESPOND_TO_REPORTER")
+               LEFT OUTER JOIN cms_enquirers ce on ce.id = crd.reportedBy 
+               LEFT OUTER JOIN cms_user cu on cu.id = comments.createdBy 
+               LEFT OUTER JOIN cms_case_classifications classification on FIND_IN_SET(classification.id,c.caseClassification)
+               WHERE c.id = ?;]]>
+     </sql-query>
+
+<sql-query id="getdynamicvariables">
+     <![CDATA[SELECT * FROM cms_dynamic_variables]]>
+</sql-query>
+
+<sql-query id="getmailcasescountsInitiator">
+     <![CDATA[
+          SELECT
+          (SELECT COUNT(id) FROM cms_cases where routeOfEnquiryId = ? and caseManageStatus = ? and isCaseValid = true and viewStatus = false) as inbox,
+          (SELECT COUNT(ccf.id) FROM cms_case_followups ccf left join cms_cases cc on ccf.caseId = cc.id WHERE (ccf.followupType = ? OR ccf.followupType = 'FORWARD_MAIL') and cc.routeOfEnquiryId = ?) as sent,
+          (SELECT COUNT(id) from cms_cases WHERE isCaseValid = ? AND routeOfEnquiryId = ? and caseManageStatus != 'CASEINTAKE_REJECTION') as rejected,
+          (SELECT COUNT(id) FROM cms_cases where routeOfEnquiryId = ? and caseManageStatus = 'CASEINTAKE_ARCHIVED' and isCaseValid = true and viewStatus = false) as archive
+     ]]>
+</sql-query>
+<sql-query id="getmailcasescountsReviewer">
+     <![CDATA[
+          SELECT
+          (SELECT COUNT(id) FROM cms_cases where routeOfEnquiryId = ? and caseManageStatus = ? and assignedTo = ? and isCaseValid = true and viewStatus = false) as inbox,
+          (SELECT COUNT(ccf.id) FROM cms_case_followups ccf left join cms_cases cc on ccf.caseId = cc.id WHERE (ccf.followupType = ? OR ccf.followupType = 'FORWARD_MAIL') and ccf.followupRequestedBy = ? and cc.routeOfEnquiryId = ?) as sent,
+          (SELECT COUNT(id) from cms_cases WHERE isCaseValid = ? AND routeOfEnquiryId = ? and caseManageStatus != 'CASEINTAKE_REJECTION') as rejected,
+          (SELECT COUNT(id) FROM cms_cases where routeOfEnquiryId = ? and caseManageStatus = 'CASEINTAKE_ARCHIVED' and isCaseValid = true and viewStatus = false) as archive
+     ]]>
+</sql-query>
+<sql-query id="getmailcasescountsApprover">
+     <![CDATA[
+          SELECT
+          (SELECT COUNT(id) FROM cms_cases where routeOfEnquiryId = ? and caseManageStatus = ? and approvedBy = ? and isCaseValid = true and viewStatus = false) as inbox,
+          (SELECT COUNT(ccf.id) FROM cms_case_followups ccf left join cms_cases cc on ccf.caseId = cc.id WHERE (ccf.followupType = ? OR ccf.followupType = 'FORWARD_MAIL') and ccf.followupRequestedBy = ? and cc.routeOfEnquiryId = ?) as sent,
+          (SELECT COUNT(id) from cms_cases WHERE isCaseValid = ? AND routeOfEnquiryId = ? and caseManageStatus != 'CASEINTAKE_REJECTION') as rejected,
+          (SELECT COUNT(id) FROM cms_cases where routeOfEnquiryId = ? and caseManageStatus = 'CASEINTAKE_ARCHIVED' and isCaseValid = true and viewStatus = false) as archive
+     ]]>
+</sql-query>
+<sql-query id="updateCaseViewStatusById">
+     <![CDATA[UPDATE cms_cases SET viewStatus = ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateCaseArchiveUnarchiveById">
+     <![CDATA[UPDATE cms_cases SET caseManageStatus = ?, viewStatus = ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateIsCaseOpenById">
+     <![CDATA[UPDATE cms_cases SET isCaseOpen = ? where id = ?;]]>
+</sql-query>
+<sql-query id="getIsCaseOpenById">
+     <![CDATA[SELECT isCaseOpen FROM cms_cases where id = ?;]]>
+</sql-query>
+<sql-query id="getHealthAuthorityRejectedCases">
+     <![CDATA[SELECT ch.*, (SELECT COUNT(id) FROM cms_cases_health_authority where caseManagementStatus is null) as count
+      FROM cms_cases_health_authority ch 
+      where ch.acceptance = '2' ]]>
+</sql-query>
+<sql-query id="getHealthAuthorityRejectedCasesSearch">
+     <![CDATA[SELECT ch.*, (SELECT COUNT(id) FROM cms_cases_health_authority WHERE caseManagementStatus is null AND (safetyreportid LIKE ? OR activesubstancename LIKE ?)) as count 
+     FROM cms_cases_health_authority ch 
+     WHERE ch.acceptance = '2' AND (safetyreportid LIKE ? OR activesubstancename LIKE ?) limit ?, ?;]]>
+</sql-query>
+<sql-query id="filterhealthauthorityRejectedCount">
+     <![CDATA[SELECT COUNT(ch.id) as count
+     FROM cms_cases_health_authority ch where ch.acceptance = '2' ]]>
+</sql-query>
+<sql-query id="getHealthAuthorityCases">
+     <![CDATA[SELECT ch.*, (SELECT COUNT(id) FROM cms_cases_health_authority where caseManagementStatus is null) as count
+      FROM cms_cases_health_authority ch 
+      where caseManagementStatus is null ]]>
+</sql-query>
+<sql-query id="getHealthAuthorityCasesByStatus">
+     <![CDATA[SELECT ch.* 
+      FROM cms_cases_health_authority ch
+      where ch.id is not null ]]>
+</sql-query>
+<sql-query id="getADRsubmittedHealthAuthorityCases">
+     <![CDATA[SELECT ch.*, (SELECT COUNT(id) FROM cms_cases_health_authority where caseManagementStatus is null) as count
+      FROM cms_cases_health_authority ch
+      where caseManagementStatus = ? ]]>
+</sql-query>
+<sql-query id="getHealthAuthorityCasesSearch">
+     <![CDATA[SELECT ch.*, (SELECT COUNT(id) FROM cms_cases_health_authority WHERE caseManagementStatus is null AND (safetyreportid LIKE ? OR activesubstancename LIKE ?)) as count 
+     FROM cms_cases_health_authority ch 
+     WHERE caseManagementStatus is null AND (safetyreportid LIKE ? OR activesubstancename LIKE ?) limit ?, ?;]]>
+</sql-query>
+<sql-query id="getHealthAuthorityCasesByStatusAll">
+     <![CDATA[SELECT ch.id
+      FROM cms_cases_health_authority ch 
+      where ch.id is not null ]]>
+</sql-query>
+<sql-query id="getHealthAuthorityCasesSearchAll">
+     <![CDATA[SELECT ch.id
+     FROM cms_cases_health_authority ch 
+     WHERE caseManagementStatus is null AND (safetyreportid LIKE ? OR activesubstancename LIKE ?) ;]]>
+</sql-query>
+<sql-query id="getHealthAuthorityCaseById">
+     <![CDATA[SELECT * FROM cms_cases_health_authority WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getSubstances">
+     <![CDATA[SELECT DISTINCT activesubstancename FROM cms_cases_health_authority;]]>
+</sql-query>
+<sql-query id="getMedicinalProducts">
+     <![CDATA[SELECT DISTINCT medicinalproduct FROM cms_cases_health_authority;]]>
+</sql-query>
+<sql-query id="filterhealthauthorityCount">
+     <![CDATA[SELECT COUNT(ch.id) as count
+     FROM cms_cases_health_authority ch where caseManagementStatus is null ]]>
+</sql-query>
+<sql-query id="filterhealthauthorityCountByStatus">
+     <![CDATA[SELECT COUNT(ch.id) as count
+     FROM cms_cases_health_authority ch where ch.id is not null ]]>
+</sql-query>
+<sql-query id="filterADRsubmittedhealthauthorityCount">
+     <![CDATA[SELECT COUNT(ch.id) as count
+     FROM cms_cases_health_authority ch where caseManagementStatus = ? ]]>
+</sql-query>
+<sql-query id="updateHealthAuthorityCase">
+     <![CDATA[UPDATE cms_cases_health_authority SET ? where id = ?;]]>
+</sql-query>
+<sql-query id="healthAuthorityCountInitiator">
+     <![CDATA[SELECT COUNT(id) as count FROM cms_cases_health_authority where caseManagementStatus is null;]]>
+</sql-query>
+<sql-query id="healthAuthorityCountReviewer">
+     <![CDATA[SELECT COUNT(id) as count FROM cms_cases_health_authority where caseManagementStatus = 'Submitted For Rejection';]]>
+</sql-query>
+<sql-query id="healthAuthorityCountApprover">
+     <![CDATA[SELECT COUNT(id) as count FROM cms_cases_health_authority where caseManagementStatus = 'Submitted For Rejection';]]>
+</sql-query>
+<sql-query id="updateHealthAuthorityAcceptance">
+     <![CDATA[UPDATE cms_cases_health_authority SET acceptance = ?, caseManagementStatus = ?, reasonForReject = ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateHealthAuthorityisAurobindoCase">
+     <![CDATA[UPDATE cms_cases_health_authority SET isAurobindoCase = ? where id = ?;]]>
+</sql-query>
+<sql-query id="getHealthAuthorityProductsData">
+     <![CDATA[SELECT * FROM cms_health_authority_products;]]>
+</sql-query>
+
+<sql-query id="addHealthAuthorityProductsData">
+     <![CDATA[INSERT INTO cms_health_authority_products (`activeSubstance`, `fullPresentationName`, `productStrengthName`, `authorisationCountry`, `Marketed`, `approvalDate`, `authorisationNumber`, `procedureType`, `procedureNumber`, `pharmaceuticalForm`, `mahName`, `createdOn`) values(?);]]>
+</sql-query>  
+
+<sql-query id="insertHealthAuthorityProductsData">
+     <![CDATA[INSERT INTO cms_health_authority_products (`activeSubstance`, `fullPresentationName`, `createdOn`) values(?,?,?);]]>
+</sql-query>  
+
+
+<sql-query id="getActiveUsers">
+     <![CDATA[SELECT user.*,role.name as roleName FROM cms_user user
+     LEFT JOIN cms_role role on role.id = user.user_role_id 
+     WHERE user.active = 1 ORDER BY user.id asc;]]>
+</sql-query>
+
+<sql-query id="getInActiveUsers">
+     <![CDATA[SELECT user.*,role.name as roleName FROM cms_user user
+     LEFT JOIN cms_role role on role.id = user.user_role_id 
+     WHERE user.active = 0 ORDER BY user.id asc;]]>
+</sql-query>
+
+
+
+<!-- Company Info Queries-->
+
+<sql-query id="getCompanyInfo">
+     <![CDATA[SELECT * FROM cms_org_info ;]]>
+</sql-query>
+
+<sql-query id="saveCompanyInfo">
+     <![CDATA[INSERT INTO cms_org_info (companyName,companyNo,companyCode,companyAddress) values(?,?,?,?);]]>
+</sql-query>  
+
+<sql-query id="updateCompanyInfo">
+     <![CDATA[UPDATE cms_org_info SET companyName = ?, companyNo = ?, companyCode = ?, companyAddress = ? WHERE id = ?;]]>
+</sql-query>
+
+<!-- Company Info Queries-->
+
+
+
+
+<!-- Email Info Queries-->
+
+<sql-query id="getEmailInfo">
+     <![CDATA[SELECT * FROM cms_email_conf;]]>
+</sql-query>
+
+<sql-query id="saveEmailInfo">
+     <![CDATA[INSERT INTO cms_email_conf (`emailId`,`password`,`service`,`port`,`sslValue`, `hostname`, `isPassword`) values (?,?,?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="updateEmailInfo">
+     <![CDATA[UPDATE cms_email_conf SET emailId = ?, password = ?, service = ?, port = ?, sslValue = ?, hostname = ?, isPassword = ? WHERE id = ?;]]>
+</sql-query>
+
+<!-- Email Info Queries-->
+
+
+<!-- Company Email Info Queries-->
+<sql-query id="getCompanyEmailInfo">
+     <![CDATA[SELECT * FROM  cms_company_website_configurations;]]>
+</sql-query> 
+
+<sql-query id="saveCompanyEmailInfo">
+     <![CDATA[INSERT INTO  cms_company_website_configurations (`emailId`,`password`,`service`,`port`,`sslValue`, `hostname`, `isPassword`) values (?,?,?,?,?,?,?);]]>
+</sql-query> 
+
+<sql-query id="updateCompanyEmailInfo">
+     <![CDATA[UPDATE cms_company_website_configurations SET emailId = ?, password = ?, service = ?, port = ?, sslValue = ?, hostname = ?, isPassword = ? WHERE id = ?;]]>
+</sql-query> 
+<!-- Company Email Info Queries-->
+
+<!-- ADR Configuration Queries-->
+<sql-query id="getAdrConfig">
+     <![CDATA[SELECT * FROM cms_adr_config;]]>
+</sql-query>
+<sql-query id="saveAdrConfig">
+     <![CDATA[INSERT INTO cms_adr_config 
+     (`_doctype`, `messagetype`, `messageformatversion`, `messageformatrelease`, `messagedateformat`, `messagesenderidentifier`, `messagereceiveridentifier`, `safetyreportversion`, `transmissiondateformat`, `reporttype`, `receivedateformat`, `receiptdateformat`, `fulfillexpeditecriteria`, `receivertype`, `receiverorganization`, `receiverdepartment`, `receivertitle`, `receivergivename`, `receiverfamilyname`, `receiverstreetaddress`, `receivercity`, `receiverstate`, `receiverpostcode`, `receivercountrycode`, `receivertel`, `receivertelextension`, `receivertelcountrycode`, `receiverfax`, `receiverfaxcountrycode`, `receiveremailaddress`, `sendertype`, `senderorganization`, `senderdepartment`, `sendertitle`, `sendergivename`, `senderfamilyname`, `senderstreetaddress`, `sendercity`, `senderstate`, `senderpostcode`, `sendercountrycode`, `sendertel`, `sendertelextension`, `sendertelcountrycode`, `senderfax`, `senderfaxextension`, `senderfaxcountrycode`, `senderemailaddress`, `reactionstartdateformat`, `reactionoutcome`, `qualification`, `actionDrug`) 
+     VALUES
+     (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query> 
+<sql-query id="updateAdrConfig">
+     <![CDATA[UPDATE cms_adr_config SET ? WHERE id = ?;]]>
+</sql-query> 
+<!-- ADR Configuration Queries-->
+
+
+ <!-- Health AuthorityConfiguration Queries -->
+
+ <sql-query id="getHealthAuthorityConfigurations">
+     <![CDATA[SELECT * FROM cms_health_authority_config;]]>
+</sql-query>
+
+<sql-query id="saveHealthAuthorityConfigurations">
+     <![CDATA[INSERT INTO cms_health_authority_config(`username`, `password`) VALUES (?,?);]]>
+</sql-query>
+
+<sql-query id="updateHealthAuthorityConfigurations">
+     <![CDATA[UPDATE cms_health_authority_config SET username = ?, password = ? WHERE id = ?;]]>
+</sql-query> 
+
+ <sql-query id="getHealthAuthProductsData">
+     <![CDATA[SELECT * FROM cms_health_authority_products WHERE createdOn BETWEEN ? AND ?;]]>
+</sql-query>
+
+<sql-query id="getHealthAuthReports">
+     <![CDATA[SELECT * FROM cms_health_auth_reports WHERE created_on BETWEEN ? AND ?;]]>
+</sql-query>
+
+<sql-query id="getHealthAuthReconcilationData">
+     <![CDATA[SELECT * FROM cms_health_auth_reconcilation WHERE created_on BETWEEN ? AND ?;]]>
+</sql-query>
+
+<sql-query id="getHealthAUthManualUploadCount">
+     <![CDATA[SELECT * FROM cms_health_auth_reconcilation WHERE sourcedate = ?;]]>
+</sql-query>
+
+
+
+ <!-- Health AuthorityConfiguration Queries -->
+
+<!-- Policy Settings Queries -->
+<sql-query id="getPolicySettings">
+     <![CDATA[SELECT * FROM cms_policy_settings;]]>
+</sql-query>
+<sql-query id="savePolicySettings">
+     <![CDATA[INSERT INTO cms_policy_settings 
+     (`user_id_min`,`user_id_max`,`username_min`,`username_max`,`password_exipiry`,
+     `no_of_wrong_attempts`,`password_length`,`password_reusability`,`password_complex`,`session_timeout`, `requestForPasswordCount`
+     ) 
+     values(?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query> 
+<sql-query id="updatePolicySettings">
+     <![CDATA[UPDATE cms_policy_settings 
+     SET user_id_min = ?, user_id_max = ?, username_min = ?, username_max = ?, password_exipiry = ?, 
+     no_of_wrong_attempts = ?, password_length = ?, password_reusability = ?, password_complex = ?, session_timeout = ?, requestForPasswordCount = ? 
+     WHERE id = ?;]]>
+</sql-query>  
+<!-- Policy Settings Queries -->
+
+
+<!-- LM Queries-->
+<sql-query id="getsearcharticle">
+     <![CDATA[SELECT id, result_title as title, result_abstract as abstract FROM lm_search_article WHERE article_status = "Submit For Triage"]]>
+</sql-query>
+<sql-query id="getspringerarticle">
+     <![CDATA[SELECT id, artcile_title as title, narrative_and_comments as abstract FROM lm_springer_article WHERE article_status = "Submit For Triage"]]>
+</sql-query>
+<sql-query id="getllsarticle">
+     <![CDATA[SELECT id, report_title as title, result_abstract as abstract FROM lm_lls_articles WHERE article_status = "Submit For Triage"]]>
+</sql-query>
+<sql-query id="getPubmedData">
+     <![CDATA[Select spa.*, lct.country_code as origin_country, lpi.product_name as product_name from lm_search_article spa 
+          left outer join lm_countries_tbl lct on lct.country_name = spa.origin_country
+          left outer join lm_product_info lpi on lpi.id = spa.product_id where spa.id = ?]]>
+</sql-query>
+<sql-query id="getAdinsightData">
+     <![CDATA[Select spa.*, lct.country_code as origin_country, lpi.product_name as product_name from lm_springer_article spa 
+          left outer join lm_countries_tbl lct on lct.country_name = spa.origin_country
+          left outer join lm_product_info lpi on lpi.id = spa.product_id where spa.id = ?]]>
+</sql-query>
+<sql-query id="getllsData">
+     <![CDATA[Select spa.*, lct.country_code as origin_country, lpi.product_name as product_name from lm_lls_articles spa 
+          left outer join lm_countries_tbl lct on lct.country_name = spa.origin_country
+          left outer join lm_product_info lpi on lpi.id = spa.product_id where spa.id = ?]]>
+</sql-query>
+
+<sql-query id="getsearcharticlebyid">
+     <![CDATA[SELECT * FROM lm_search_article WHERE id = ?]]>
+</sql-query>
+<sql-query id="getspringerarticlebyid">
+     <![CDATA[SELECT * FROM lm_springer_article WHERE id = ?]]>
+</sql-query>
+<sql-query id="getllsarticlebyid">
+     <![CDATA[SELECT * FROM lm_lls_articles WHERE id = ?]]>
+</sql-query>
+<sql-query id="getmlmarticlebyid">
+     <![CDATA[SELECT * FROM lm_mlmdata WHERE id = ?]]>
+</sql-query>
+<sql-query id="updatesearcharticle">
+     <![CDATA[UPDATE lm_search_article SET gpvd_reference_number = ?, gpvd_reference_number_for_bookin = ?, version_number = ?, argus_number = ?, zero_day = ?, bookin_date = ?, inclusion_exclusion_id = ?, serious = ?, isDuplicated = ?, article_status = ?,
+     patientInitial = ?, patientOnSetAge = ?, patientOnSetAgeUnit = ?, 
+     patientSex = ?, patientEpisodeNameMeddraVersion = ?, patientEpisodeName = ?, obtainDrugCountry = ?, drugAuthorizationCountry = ?, drugAuthorizationHolder = ?, 
+     drugDosageText = ?, drugAdministrationRoute = ?, drugIndicationMeddraVersion = ?, drugIndication = ?, actionDrug = ?, drugRecurreAdministration = ?, 
+     drugCharacterization = ?,
+     xmlfile = ?, safetyReportId = ? 
+     where id = ?;]]>
+</sql-query>
+<sql-query id="updatespringerarticle">
+    <![CDATA[UPDATE lm_springer_article SET gpvd_reference_number = ?, gpvd_reference_number_for_bookin = ?, version_number = ?, argus_number = ?, zero_day = ?, bookin_date = ?, inclusion_exclusion_id = ?, serious = ?, isDuplicated = ?, article_status = ?, 
+     patientInitial = ?, patientOnSetAge = ?, patientOnSetAgeUnit = ?, 
+     patientSex = ?, patientEpisodeNameMeddraVersion = ?, patientEpisodeName = ?, obtainDrugCountry = ?, drugAuthorizationCountry = ?, drugAuthorizationHolder = ?, 
+     drugDosageText = ?, drugAdministrationRoute = ?, drugIndicationMeddraVersion = ?, drugIndication = ?, actionDrug = ?, drugRecurreAdministration = ?, 
+     drugCharacterization = ?,
+     xmlfile = ?, safetyReportId = ? 
+     where id = ?;]]>
+
+</sql-query>
+<sql-query id="updatellsarticles">
+    <![CDATA[UPDATE lm_lls_articles SET gpvd_reference_number = ?, gpvd_reference_number_for_bookin = ?, version_number = ?, argus_number = ?, zero_day = ?, bookin_date = ?, inclusion_exclusion_id = ?, serious = ?, isDuplicated = ?, article_status = ?,
+     patientInitial = ?, patientOnSetAge = ?, patientOnSetAgeUnit = ?, 
+     patientSex = ?, patientEpisodeNameMeddraVersion = ?, patientEpisodeName = ?, obtainDrugCountry = ?, drugAuthorizationCountry = ?, drugAuthorizationHolder = ?, 
+     drugDosageText = ?, drugAdministrationRoute = ?, drugIndicationMeddraVersion = ?, drugIndication = ?, actionDrug = ?, drugRecurreAdministration = ?, 
+     drugCharacterization = ?,
+     xmlfile = ?, safetyReportId = ? 
+     where id = ?;]]>
+
+</sql-query>
+
+<sql-query id="updatemlmarticlebyid">
+     <![CDATA[UPDATE lm_mlmdata SET reason_for_exclusion = ?, accepted = ?, case_no = ?, version = ?, performed_by = ?, qc_by = ?, comments = ?, aurobindo_licence = ?, article_status = ?
+     where id = ?;]]>
+
+</sql-query>
+
+<!-- <sql-query id="updatemlmarticlebyid">
+     <![CDATA[UPDATE lm_mlmdata SET reason_for_exclusion = ?, accepted = ?, case_no = ?, version = ?, performed_by = ?, qc_by = ?, comments = ?, aurobindo_licence = ?, article_status = ?
+     senderComment = ?, receiptDate = ?, fulfillExpediteCriteria = ?, patientInitial = ?, patientOnSetAge = ?, patientOnSetAgeUnit = ?, 
+     patientSex = ?, patientEpisodeNameMeddraVersion = ?, patientEpisodeName = ?, obtainDrugCountry = ?, drugAuthorizationCountry = ?, drugAuthorizationHolder = ?, 
+     drugDosageText = ?, drugAdministrationRoute = ?, drugIndicationMeddraVersion = ?, drugIndication = ?, actionDrug = ?, drugRecurreAdministration = ?
+     where id = ?;]]>
+
+</sql-query> -->
+
+<sql-query id="getpubmedarticles">
+     <![CDATA[SELECT *, (SELECT COUNT(id) FROM lm_search_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)) as count FROM lm_search_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) ]]>
+</sql-query>
+<sql-query id="getpubmedarticlesCounts">
+     <![CDATA[SELECT  (
+               SELECT COUNT(id) FROM lm_search_article
+               WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)
+               ) AS validCasesCount,
+               (
+               SELECT count(id) FROM lm_search_article
+               WHERE article_status = 'Submitted For ADR' and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)
+               ) AS adrCasesCount;]]>
+</sql-query>
+<sql-query id="getAdisinsightArticlesCounts">
+       <![CDATA[SELECT  (
+               SELECT COUNT(id) FROM lm_springer_article
+                    WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)
+               ) AS validCasesCount,
+               (
+               SELECT count(id) FROM lm_springer_article
+               WHERE article_status = 'Submitted For ADR' and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)
+               ) AS adrCasesCount;]]>
+</sql-query>
+<sql-query id="getLLsArticlesCounts">
+        <![CDATA[SELECT  (
+               SELECT COUNT(id) FROM lm_lls_articles
+               WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)
+               ) AS validCasesCount,
+               (
+               SELECT count(id) FROM lm_lls_articles
+               WHERE article_status = 'Submitted For ADR' and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)
+               ) AS adrCasesCount;]]>
+</sql-query>
+<sql-query id="getmedicalliteraturearticlesCounts">
+     <![CDATA[select COUNT(lmd.id) as count from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null;]]>
+</sql-query>
+<sql-query id="getpubmedarticlesSearch">
+     <![CDATA[SELECT *, (SELECT COUNT(id) FROM lm_search_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) and (reference_number LIKE ? || result_title LIKE ? || journal_information LIKE ? || author LIKE ? || pubmedid LIKE ? || result_abstract LIKE ? || origin_country LIKE ?)) as count FROM lm_search_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) and (reference_number LIKE ? || result_title LIKE ? || journal_information LIKE ? || author LIKE ? || pubmedid LIKE ? || result_abstract LIKE ? || origin_country LIKE ?) ]]>
+</sql-query>
+<sql-query id="getadisinsightarticles">
+     <![CDATA[SELECT *, (SELECT COUNT(id) FROM lm_springer_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)) as count FROM lm_springer_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) ]]>
+</sql-query>
+<sql-query id="getadisinsightarticlesSearch">
+     <![CDATA[SELECT *, (SELECT COUNT(id) FROM lm_springer_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) and (reference_number LIKE ? || artcile_title LIKE ? || record_type LIKE ? || narrative_and_comments LIKE ? || author LIKE ? || origin_country LIKE ? || drugs LIKE ? || drug_class LIKE ?)) as count FROM lm_springer_article WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) and (reference_number LIKE ? || artcile_title LIKE ? || record_type LIKE ? || narrative_and_comments LIKE ? || author LIKE ? || origin_country LIKE ? || drugs LIKE ? || drug_class LIKE ?) ]]>
+</sql-query>
+<sql-query id="getllsarticles">
+     <![CDATA[SELECT *, (SELECT COUNT(id) FROM lm_lls_articles WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3)) as count FROM lm_lls_articles WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) ]]>
+</sql-query>
+<sql-query id="getllsarticlesSearch">
+     <![CDATA[SELECT *, (SELECT COUNT(id) FROM lm_lls_articles WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) and (local_number LIKE ? || report_title LIKE ? || reference LIKE ? || result_abstract LIKE ?)) as count FROM lm_lls_articles WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3) and (local_number LIKE ? || report_title LIKE ? || reference LIKE ? || result_abstract LIKE ?) ]]>
+</sql-query>
+<sql-query id="getmedicalliteraturearticles">
+     <![CDATA[select lmd.*, country.country_name as primary_source_country, (select COUNT(lmd.id) from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null) as count from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id  inner join lm_countries_tbl country on country.country_code = lmd.primary_source_country Where lma.article_status = 'Submit for Triage' and lmd.article_status is null ]]>
+</sql-query>
+<sql-query id="getmedicalliteraturearticlesSearch">
+     <![CDATA[select lmd.*, (select COUNT(lmd.id) from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null and (substance_group LIKE ? || reference_database LIKE ? || primary_source_country LIKE ? || serious LIKE ? || initial_fu_amendment LIKE ? || literature_reference LIKE ? || lead_author LIKE ?)) as count from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null and (substance_group LIKE ? || reference_database LIKE ? || primary_source_country LIKE ? || serious LIKE ? || initial_fu_amendment LIKE ? || literature_reference LIKE ? || lead_author LIKE ?) limit ?, ?;]]>
+</sql-query>
+<sql-query id="filtermedicalliteraturearticles">
+     <![CDATA[select lmd.*, (select COUNT(lmd.id) from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null and substance_group LIKE ? and primary_source_country = ? and serious = ? and receive_date between ? and ?) as count from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null and substance_group LIKE ? and primary_source_country = ? and serious = ? and receive_date between ? and ? limit ?, ?;]]>
+</sql-query>
+<sql-query id="searchAllMLMArticles">
+     <![CDATA[select lmd.*, country.country_name as primary_source_country, (select COUNT(lmd.id) from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null) as count from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id inner join lm_countries_tbl country on country.country_code = lmd.primary_source_country Where lma.article_status = 'Submit for Triage' and lmd.article_status is null ]]>
+</sql-query>
+<sql-query id="getMLMCasesCount">
+     <![CDATA[select COUNT(lmd.id) as count from lm_mlm_articles lma inner join lm_mlmdata lmd on lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null ]]>
+</sql-query>
+<sql-query id="commentsList">
+     <![CDATA[SELECT * FROM lm_comments;]]>
+</sql-query>
+<sql-query id="getlmCounts">
+     <![CDATA[SELECT 
+	  ((SELECT COUNT(id) FROM lm_search_article
+		   WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3))
+		   +
+	  (SELECT COUNT(id) FROM lm_springer_article
+				WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3))
+		   +
+	  (SELECT COUNT(id) FROM lm_lls_articles
+		   WHERE article_status = "Submit For Triage" and (status_type = "ConfirmedICSR" or inclusion_exclusion_id = 3))
+		   +
+	  (select COUNT(lmd.id) from lm_mlm_articles lma inner join lm_mlmdata lmd on 
+	  lmd.article_id = lma.id Where lma.article_status = 'Submit for Triage' and lmd.article_status is null)) as totalCount;
+     ]]>
+</sql-query>
+ <sql-query id="getMedicalReviewersList">
+     <![CDATA[SELECT username, email, id, user_id FROM lm_user WHERE user_role_id = 10;]]>
+</sql-query>
+ 
+
+  <sql-query id="getpubmedgeneratereports">     
+    <![CDATA[Select sa.result_title as result_title, sa.result_abstract as result_abstract,sa.*,sa.id as articleId,c.Comment,api.*,np.*,lr.remainded_on as fulltext_reminder_on,lt.remainded_on as translation_remainder_on, lq.remainded_on as query_remainder_on,
+     sa.qcreviewer_by as reviewerName,sa.bookinreview_by as bookinName,sa.medical_review_by as medicalReviewerName,
+    qt.db_type,fr.date as fullTextRequestedDate,sa.medical_reveiwer_comments as medicalreviewercomments, fr.filesubmited_date as fullTextRecievedDate,qt.created_on as translationRequestedDate,
+    qt.received_date as translationRecievedDate,
+    qa.created_on as queryRequestedDate, qa.received_date as queryRecievedDate,
+    CONCAT(au.username) as literatureAssistant from lm_search_article sa  
+    left outer join lm_user  au on au.id = sa.lareviewer_by
+    left outer join lm_product_info api on api.id = sa.product_id
+    left outer join lm_newfiling_product_info np on np.id = sa.product_id
+    left outer join lm_article_comments lac on lac.articleid = sa.id
+    left outer join lm_comments c on c.CommentID = sa.inclusion_exclusion_id
+    left outer join lm_fullarticle_request fr on fr.article_id = sa.id
+    left outer join lm_query_translation qt on qt.article_id = sa.id and qt.db_type = "pubmed" and qt.type = "translation"
+    left outer join lm_query_translation qa on qa.article_id = sa.id and qa.db_type = "pubmed" and qa.type = "query"
+	left outer join lm_article_remainders lr on lr.article_id = sa.id and lr.article_type = "pubmed" and lr.remainder_type = "Full Text Remainder"
+    left outer join lm_article_remainders lq on lq.article_id = sa.id and lq.article_type = "pubmed" and lq.remainder_type = "Query Remainder"
+    left outer join lm_article_remainders lt on lt.article_id = sa.id and lt.article_type = "pubmed" and lt.remainder_type = "Translation Remainder"
+    where (sa.status_type = "ConfirmedICSR" or sa.inclusion_exclusion_id = 3)]]>
+    </sql-query>
+    <sql-query id="getpubmedgeneratereportscount">     
+    <![CDATA[Select count(sa.id) as count from lm_search_article sa 
+    left outer join lm_user  au on au.id = sa.lareviewer_by
+    left outer join lm_product_info api on api.id = sa.product_id
+    left outer join lm_newfiling_product_info np on np.id = sa.product_id
+    left outer join lm_article_comments lac on lac.articleid = sa.id
+    left outer join lm_comments c on c.CommentID = sa.inclusion_exclusion_id
+    left outer join lm_fullarticle_request fr on fr.article_id = sa.id
+    left outer join lm_query_translation qt on qt.article_id = sa.id and qt.db_type = "pubmed" and qt.type = "translation"
+    left outer join lm_query_translation qa on qa.article_id = sa.id and qa.db_type = "pubmed" and qa.type = "query"
+	left outer join lm_article_remainders lr on lr.article_id = sa.id and lr.article_type = "pubmed" and lr.remainder_type = "Full Text Remainder"
+    left outer join lm_article_remainders lq on lq.article_id = sa.id and lq.article_type = "pubmed" and lq.remainder_type = "Query Remainder"
+    left outer join lm_article_remainders lt on lt.article_id = sa.id and lt.article_type = "pubmed" and lt.remainder_type = "Translation Remainder"
+    where (sa.status_type = "ConfirmedICSR" or sa.inclusion_exclusion_id = 3) ]]>
+    </sql-query>
+     <sql-query id="getadisinsightgeneratereports">     
+    <![CDATA[Select sa.journal_information as result_title, sa.narrative_and_comments as result_abstract, sa.*,sa.id as articleId,c.Comment,api.product_name as search_term, np.product_name as new_filing_search_term, api.*,np.*,lr.remainded_on as fulltext_reminder_on,lt.remainded_on as translation_remainder_on, lq.remainded_on as query_remainder_on,qa.created_on as queryRequestedDate, qa.received_date as queryRecievedDate,
+    sa.qcreviewer_by as reviewerName,sa.bookinreview_by as bookinName,sa.medical_review_by as medicalReviewerName, qt.db_type,fr.date as fullTextRequestedDate ,
+    fr.filesubmited_date as fullTextRecievedDate,sa.medical_reveiwer_comments as medicalreviewercomments, qt.created_on as translationRequestedDate,qt.received_date as translationRecievedDate, CONCAT(au.username) as literatureAssistant,c.Comment from lm_springer_article sa 
+    left outer join  lm_user  au on au.id = sa.lareviewer_by
+    left outer join  lm_product_info api on api.id = sa.product_id
+    left outer join  lm_newfiling_product_info np on np.id = sa.product_id
+    left outer join  lm_comments c on c.CommentID = sa.inclusion_exclusion_id
+    left outer join  lm_springer_fullarticle_request fr on fr.article_id = sa.id
+    left outer join  lm_query_translation qt on qt.article_id = sa.id and qt.db_type = "springer" and qt.type = "translation"
+    left outer join  lm_query_translation qa on qa.article_id = sa.id and qa.db_type = "springer" and qa.type = "query"
+	left outer join  lm_article_remainders lr on lr.article_id = sa.id and lr.article_type = "springer" and lr.remainder_type = "Full Text Remainder"
+    left outer join  lm_article_remainders lq on lq.article_id = sa.id and lq.article_type = "springer" and lq.remainder_type = "Query Remainder"
+    left outer join  lm_article_remainders lt on lt.article_id = sa.id and lt.article_type = "springer" and lt.remainder_type = "Translation Remainder"                        
+    where (sa.status_type = "ConfirmedICSR" or sa.inclusion_exclusion_id = 3) ]]>
+    </sql-query>
+     <sql-query id="getadisinsightgeneratereportscount">     
+    <![CDATA[Select count(sa.id) as count from lm_springer_article sa 
+    left outer join  lm_user  au on au.id = sa.lareviewer_by
+    left outer join  lm_product_info api on api.id = sa.product_id
+    left outer join  lm_newfiling_product_info np on np.id = sa.product_id
+    left outer join  lm_comments c on c.CommentID = sa.inclusion_exclusion_id
+    left outer join  lm_springer_fullarticle_request fr on fr.article_id = sa.id
+    left outer join  lm_query_translation qt on qt.article_id = sa.id and qt.db_type = "springer" and qt.type = "translation"
+    left outer join  lm_query_translation qa on qa.article_id = sa.id and qa.db_type = "springer" and qa.type = "query"
+	left outer join  lm_article_remainders lr on lr.article_id = sa.id and lr.article_type = "springer" and lr.remainder_type = "Full Text Remainder"
+    left outer join  lm_article_remainders lq on lq.article_id = sa.id and lq.article_type = "springer" and lq.remainder_type = "Query Remainder"
+    left outer join  lm_article_remainders lt on lt.article_id = sa.id and lt.article_type = "springer" and lt.remainder_type = "Translation Remainder"                        
+    where (sa.status_type = "ConfirmedICSR" or sa.inclusion_exclusion_id = 3) ]]>
+    </sql-query> 
+    <sql-query id="getllsgeneratereports">     
+    <![CDATA[Select sa.report_title as result_title, sa.result_abstract as result_abstract,sa.*,sa.id as articleId,c.Comment,api.product_name as search_term,sa.medical_reveiwer_comments as medicalreviewercomments, np.product_name as new_filing_search_term, api.*,np.*,lr.remainded_on as fulltext_reminder_on,lt.remainded_on as translation_remainder_on, lq.remainded_on as query_remainder_on, qa.created_on as queryRequestedDate, 
+    qa.received_date as queryRecievedDate,sa.qcreviewer_by as reviewerName,sa.bookinreview_by as bookinName,sa.medical_review_by as medicalReviewerName,  qt.db_type,fr.date as fullTextRequestedDate ,
+    fr.filesubmited_date as fullTextRecievedDate,qt.created_on as translationRequestedDate,qt.received_date as translationRecievedDate, CONCAT(au.username) as literatureAssistant,c.Comment from lm_lls_articles sa
+     left outer join  lm_user  au on au.id = sa.lareviewer_by
+    left outer join  lm_product_info api on api.id = sa.product_id
+    left outer join  lm_newfiling_product_info np on np.id = sa.product_id
+    left outer join  lm_comments c on c.CommentID = sa.inclusion_exclusion_id
+    left outer join  lm_lls_fullarticle_request fr on fr.article_id = sa.id
+    left outer join  lm_query_translation qt on qt.article_id = sa.id and qt.db_type = "lls" and qt.type = "translation"
+    left outer join  lm_query_translation qa on qa.article_id = sa.id and qa.db_type = "lls" and qa.type = "query"
+	left outer join  lm_article_remainders lr on lr.article_id = sa.id and lr.article_type = "lls" and lr.remainder_type = "Full Text Remainder"
+    left outer join  lm_article_remainders lq on lq.article_id = sa.id and lq.article_type = "lls" and lq.remainder_type = "Query Remainder"
+    left outer join  lm_article_remainders lt on lt.article_id = sa.id and lt.article_type = "lls" and lt.remainder_type = "Translation Remainder"    
+    where (sa.status_type = "ConfirmedICSR" or sa.inclusion_exclusion_id = 3) ]]>
+    </sql-query>
+    <sql-query id="getllsgeneratereportscount">     
+    <![CDATA[Select count(sa.id) as count from lm_lls_articles sa
+     left outer join  lm_user  au on au.id = sa.lareviewer_by
+    left outer join  lm_product_info api on api.id = sa.product_id
+    left outer join  lm_newfiling_product_info np on np.id = sa.product_id
+    left outer join  lm_comments c on c.CommentID = sa.inclusion_exclusion_id
+    left outer join  lm_lls_fullarticle_request fr on fr.article_id = sa.id
+    left outer join  lm_query_translation qt on qt.article_id = sa.id and qt.db_type = "lls" and qt.type = "translation"
+    left outer join  lm_query_translation qa on qa.article_id = sa.id and qa.db_type = "lls" and qa.type = "query"
+	left outer join  lm_article_remainders lr on lr.article_id = sa.id and lr.article_type = "lls" and lr.remainder_type = "Full Text Remainder"
+    left outer join  lm_article_remainders lq on lq.article_id = sa.id and lq.article_type = "lls" and lq.remainder_type = "Query Remainder"
+    left outer join  lm_article_remainders lt on lt.article_id = sa.id and lt.article_type = "lls" and lt.remainder_type = "Translation Remainder"    
+    where (sa.status_type = "ConfirmedICSR" or sa.inclusion_exclusion_id = 3) ]]>
+    </sql-query>
+     <sql-query id="getmlmgeneratereports">     
+    <![CDATA[select lm.*, la.lareviewer_by as intialReviewer,
+            la.qcreviewer_by as qcReviewer, la.lareviewer_date, la.qcreviewer_date,
+            bu.username as bookinName, ct.country_name  from lm_mlmdata lm
+            left outer join lm_countries_tbl ct on ct.country_code = lm.primary_source_country
+            left outer join lm_mlm_articles la on la.id	 = lm.article_id
+            left outer join lm_user bu on bu.id = la.bookinreview_by ]]>
+    </sql-query>
+     <sql-query id="getmlmgeneratereportscount">     
+    <![CDATA[select count(lm.id) as count from lm_mlmdata lm
+            left outer join lm_countries_tbl ct on ct.country_code = lm.primary_source_country
+            left outer join lm_mlm_articles la on la.id	 = lm.article_id
+            left outer join lm_user bu on bu.id = la.bookinreview_by ]]>
+    </sql-query>
+
+<sql-query id="updateSearchArticleSeriousness">
+     <![CDATA[UPDATE lm_search_article SET gpvd_reference_number = ?, gpvd_reference_number_for_bookin = ?, version_number = ?, argus_number = ?, zero_day = ?, bookin_date = ?, inclusion_exclusion_id = ?, serious = ?, serious_assessment_required = ?, medical_review_by = ?, isDuplicated = ?, article_status = ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateSpringerArticleSeriousness">
+     <![CDATA[UPDATE lm_springer_article SET gpvd_reference_number = ?, gpvd_reference_number_for_bookin = ?, version_number = ?, argus_number = ?, zero_day = ?, bookin_date = ?, inclusion_exclusion_id = ?, serious = ?, serious_assessment_required = ?, medical_review_by = ?, isDuplicated = ?, article_status = ? where id = ?;]]>
+</sql-query>
+<sql-query id="updateLLSArticleSeriousness">
+     <![CDATA[UPDATE lm_lls_articles SET gpvd_reference_number = ?, gpvd_reference_number_for_bookin = ?, version_number = ?, argus_number = ?, zero_day = ?, bookin_date = ?, inclusion_exclusion_id = ?, serious = ?, serious_assessment_required = ?, medical_review_by = ?, isDuplicated = ?, article_status = ? where id = ?;]]>
+</sql-query>
+
+
+<sql-query id="getSearchArticleDatabyId">
+     <![CDATA[SELECT sa.*, 
+     lc.country_code as occur_country,
+     lc.country_code as primary_source_country,
+       lc.country_code as origin_country,
+     sa.sourced_date as receivedDate  
+     from lm_search_article sa
+     left join lm_countries_tbl lc on lc.country_name = sa.origin_country
+     where sa.id = ?]]>
+
+</sql-query>
+<sql-query id="getSpringerArticleDatabyId">
+     <![CDATA[SELECT sa.*, 
+     lc.country_code as occur_country,
+     lc.country_code as primary_source_country,
+       lc.country_code as origin_country,
+     sa.sourcedate as receivedDate  
+     from lm_springer_article sa
+     left join lm_countries_tbl lc on lc.country_name = sa.origin_country
+     left join lm_springer_fullarticle_request lf on lf.article_id = sa.id
+     where sa.id = ?]]>
+</sql-query>
+<sql-query id="getLLSArticleDatabyId">
+     <![CDATA[SELECT lls.*, 
+     lc.country_code as occur_country,
+     lc.country_code as primary_source_country,
+       lc.country_code as origin_country,
+     lls.day_zero as receivedDate  
+     from lm_lls_articles lls
+     left join lm_countries_tbl lc on lc.country_name = lls.country
+     where lls.id = ?]]>
+</sql-query>
+<sql-query id="getMLMArticleDatabyId">
+     <![CDATA[SELECT * from lm_mlmdata where id = ?]]>
+</sql-query>
+
+<sql-query id="updatePubmedArticleisOpen">
+     <![CDATA[UPDATE lm_search_article SET isOpen = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updateAdinsightArticleisOpen">
+     <![CDATA[UPDATE lm_springer_article SET isOpen = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updatellsArticleisOpen">
+     <![CDATA[UPDATE lm_lls_articles SET isOpen = ? WHERE id = ?;]]>
+</sql-query>
+<sql-query id="updatePubmedArticleisOpenAll">
+     <![CDATA[UPDATE lm_search_article SET isOpen = ?;]]>
+</sql-query>
+<sql-query id="updateAdinsightArticleisOpenAll">
+     <![CDATA[UPDATE lm_springer_article SET isOpen = ?;]]>
+</sql-query>
+<sql-query id="updatellsArticleisOpenAll">
+     <![CDATA[UPDATE lm_lls_articles SET isOpen = ?;]]>
+</sql-query>
+
+
+<sql-query id="getSearchArticleIsopenbyId">
+     <![CDATA[SELECT isOpen FROM lm_search_article WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getSpringerArticleIsopenbyId">
+     <![CDATA[SELECT isOpen FROM lm_springer_article WHERE id = ?;]]>
+</sql-query>
+<sql-query id="getLLSArticleIsopenbyId">
+     <![CDATA[SELECT isOpen FROM lm_lls_articles WHERE id = ?;]]>
+</sql-query>
+
+<sql-query id="postPrimarySource">
+     <![CDATA[INSERT INTO lm_primary_sources(`articleId`, `safetyReportId`, `type`, `reportergivename`, `reporterfamilyname`, `reportercountry`,`qualification`, `literaturereference`, `createdOn`) VALUES (?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="updatePrimarySource">
+     <![CDATA[UPDATE lm_primary_sources SET `reportergivename` = ?, `reporterfamilyname` = ?, `reportercountry` = ?,`qualification` = ?, `literaturereference` = ?, `updatedOn` = ? WHERE id =?]]>
+</sql-query>
+
+<sql-query id="postPatientDetails">
+     <![CDATA[INSERT INTO lm_pratient_detials(`articleId`, `safetyReportId`, `type`, `patientInitial`, `patientOnSetAge`, `patientOnSetAgeUnit`,`patientSex`, `patientEpisodeNameMeddraVersion`, `patientEpisodeName`, `createdOn`) VALUES (?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="updatePatientDetails">
+     <![CDATA[UPDATE lm_pratient_detials SET `patientInitial` = ?, `patientOnSetAge` = ?, `patientOnSetAgeUnit` = ?,`patientSex` = ?, `patientEpisodeNameMeddraVersion` = ?, `patientEpisodeName` = ?, `updatedOn` = ? WHERE id =?]]>
+</sql-query>
+
+<sql-query id="getCaseDetailsbyArticleId">
+     <![CDATA[SELECT * FROM lm_case_details WHERE articleId = ?;]]>
+</sql-query>
+<sql-query id="getCaseDetailsbyArticleId1">
+     <![CDATA[SELECT * FROM lm_case_details WHERE articleId = ? and safetyReportId = ?;]]>
+</sql-query>
+
+<sql-query id="postCaseDetails">
+     <![CDATA[INSERT INTO lm_case_details(`articleId`, `safetyReportId`, `type`, `origin_country`, `occur_country`, `seriousnessCriteria`,`fulfillExpediteCriteria`, `receivedDate`, `transmissionDate`, `receiptDate`, `reportType`, `senderComment`, `createdOn`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="updateCaseDetails">
+     <![CDATA[UPDATE lm_case_details SET `origin_country` = ?, `occur_country` = ?, `seriousnessCriteria` = ?,`fulfillExpediteCriteria` = ?, `receivedDate` = ?, `transmissionDate` = ?, `receiptDate` = ?, `reportType` = ?, `senderComment` = ?, `updatedOn` = ? WHERE id =?]]>
+</sql-query>
+
+<sql-query id="getDrugInfoByArticleId">
+     <![CDATA[SELECT * FROM lm_drug_information_details WHERE articleId = ?;]]>
+</sql-query>
+<sql-query id="getDrugInfoByArticleId1">
+     <![CDATA[SELECT * FROM lm_drug_information_details WHERE articleId = ? and safetyReportId = ?;]]>
+</sql-query>
+
+<sql-query id="getPrimarySourceByArticleId">
+     <![CDATA[SELECT * FROM lm_primary_sources WHERE articleId = ?;]]>
+</sql-query>
+<sql-query id="getPrimarySourceByArticleId1">
+     <![CDATA[SELECT * FROM lm_primary_sources WHERE articleId = ? and safetyReportId = ?;]]>
+</sql-query>
+
+<sql-query id="getPatientDetailsByArticleId">
+     <![CDATA[SELECT * FROM lm_pratient_detials WHERE articleId = ?;]]>
+</sql-query>
+<sql-query id="getPatientDetailsByArticleId1">
+     <![CDATA[SELECT * FROM lm_pratient_detials WHERE articleId = ? and safetyReportId = ?;]]>
+</sql-query>
+
+<sql-query id="postPatientReaction">
+     <![CDATA[INSERT INTO lm_patient_reactions(`articleId`, `safetyReportId`, `type`, `primarysourcereaction`, `reactionmeddraversionllt`, `reactionmeddrallt`,`reactionmeddraversionpt`, `reactionmeddrapt`, `reactionoutcome`, `createdOn`) VALUES (?,?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="updatePatientReaction">
+     <![CDATA[UPDATE lm_patient_reactions SET `primarysourcereaction` = ?, `reactionmeddraversionllt` = ?, `reactionmeddrallt` = ?,`reactionmeddraversionpt` = ?, `reactionmeddrapt` = ?, `reactionoutcome` = ?, `updatedOn` = ? WHERE id =?]]>
+</sql-query>
+
+<sql-query id="getPatientReactionByArticleId">
+     <![CDATA[SELECT * FROM lm_patient_reactions WHERE articleId = ?;]]>
+</sql-query>
+<sql-query id="getPatientReactionByArticleId1">
+     <![CDATA[SELECT * FROM lm_patient_reactions WHERE articleId = ? and safetyReportId = ?;]]>
+</sql-query>
+
+<sql-query id="postDrugRactionRelatednes">
+     <![CDATA[INSERT INTO lm_drug_raction_relatednes(`articleId`, `safetyReportId`, `type`, `drugreactionassesmeddraversion`, `drugreactionasses`, `drugassessmentsource`, `drugassessmentmethod`,`drugresult`, `createdOn`) VALUES (?,?,?,?,?,?,?,?,?);]]>
+</sql-query>
+
+<sql-query id="updateDrugRactionRelatednes">
+     <![CDATA[UPDATE lm_drug_raction_relatednes SET `drugreactionassesmeddraversion` = ?, `drugreactionasses` = ?, `drugassessmentsource` = ?, `drugassessmentmethod` = ?, `drugresult` = ?, `updatedOn` = ? WHERE id =?]]>
+</sql-query>
+
+<sql-query id="getDrugRactionRelatednesByArticleId">
+     <![CDATA[SELECT * FROM lm_drug_raction_relatednes WHERE articleId = ?;]]>
+</sql-query>
+<sql-query id="getDrugRactionRelatednesByArticleId1">
+     <![CDATA[SELECT * FROM lm_drug_raction_relatednes WHERE articleId = ? and safetyReportId = ?;]]>
+</sql-query>
+
+
+
+     <!-- LM Duplicate Articles Queries -->
+
+     <sql-query id="getPubmedDuplicateArticleDataById">
+     <![CDATA[SELECT result_title,result_abstract,origin_country,journal_information,author,reference_number,publicationdate,sourced_date as receivedDate,product_id FROM lm_search_article WHERE id = ?;]]>
+     </sql-query>
+     <sql-query id="getSpringerDuplicateArticleDatabyId">
+     <![CDATA[SELECT reference as result_title,narrative_and_comments as journal_information,origin_country,reference,author,reference_number,sourcedate as receivedDate,product_id FROM lm_springer_article WHERE id = ?;]]>
+     </sql-query>
+     <sql-query id="getLLSDuplicateArticleDatabyId">
+     <![CDATA[SELECT report_title as result_title,result_abstract,country as origin_country,journal_information,author,reference_number,day_zero as receivedDate,product_id FROM lm_lls_articles WHERE id = ?;]]>
+     </sql-query>
+
+     <sql-query id="getPubmedDuplicateArticleDataById1">
+     <![CDATA[SELECT lsa.id,lsa.result_title,lsa.result_abstract,lsa.origin_country,lsa.journal_information,lsa.author,lsa.reference_number,lsa.publicationdate,
+          lsa.sourced_date as receivedDate,lsa.product_id,lsa.argus_number,lpd.patientInitial,lpd.patientOnSetAge,lpd.patientOnSetAgeUnit,lpd.patientSex,lpd.patientEpisodeNameMeddraVersion,lpd.patientEpisodeName,'Pubmed' as type FROM lm_search_article lsa left join lm_pratient_detials lpd on lsa.id = lpd.articleId
+          WHERE lsa.id != ? ]]>
+     </sql-query>
+     <sql-query id="getSpringerDuplicateArticleDatabyId1">
+     <![CDATA[SELECT lsa.id,lsa.reference as result_title,lsa.narrative_and_comments as journal_information,lsa.origin_country,lsa.reference,author,
+          lsa.reference_number,lsa.sourcedate as receivedDate,lsa.product_id,lsa.argus_number,lpd.patientInitial,lpd.patientOnSetAge,lpd.patientOnSetAgeUnit,lpd.patientSex,lpd.patientEpisodeNameMeddraVersion,lpd.patientEpisodeName,'Adisinsight' as type FROM lm_springer_article lsa left join lm_pratient_detials lpd on lsa.id = lpd.articleId
+          WHERE lsa.id != ? ]]>
+     </sql-query>
+     <sql-query id="getLLSDuplicateArticleDatabyId1">
+     <![CDATA[ SELECT lsa.id,lsa.report_title as result_title,lsa.result_abstract,lsa.country as origin_country,lsa.journal_information,lsa.author,lsa.reference_number,
+          lsa.day_zero as receivedDate,lsa.product_id,lsa.argus_number,lpd.patientInitial,lpd.patientOnSetAge,lpd.patientOnSetAgeUnit,lpd.patientSex,lpd.patientEpisodeNameMeddraVersion,lpd.patientEpisodeName,'LLS' as type FROM lm_lls_articles lsa left join lm_pratient_detials lpd on lsa.id = lpd.articleId
+          WHERE lsa.id != ?]]>
+     </sql-query>
+
+
+     <sql-query id="getPubmedArticleDataByDuplicateData">
+     <![CDATA[SELECT id,result_title,result_abstract,origin_country,journal_information,author,reference_number,sourced_date as receivedDate,'Pubmed' as type,argus_number,isDuplicated,duplicatedReason FROM lm_search_article
+     WHERE journal_information = ? AND result_title = ? AND author = ?;]]>
+     </sql-query>
+     <sql-query id="getSpringerArticleDatabyDuplicateData">
+     <![CDATA[SELECT id,journal_information as result_title,narrative_and_comments as result_abstract,origin_country,author,reference_number,sourcedate as receivedDate,'Adisinsight' as type,argus_number,isDuplicated,duplicatedReason FROM lm_springer_article 
+     WHERE journal_information = ?;]]>
+     </sql-query>
+     <sql-query id="getLLSArticleDatabyDuplicateData">
+     <![CDATA[SELECT id,report_title as result_title,result_abstract,country as origin_country,journal_information,author,reference_number,day_zero as receivedDate,'LLS' as type,argus_number,isDuplicated,duplicatedReason FROM lm_lls_articles 
+     WHERE journal_information = ? AND report_title = ? AND author = ?;]]>
+     </sql-query>
+<sql-query id="getUserDATA">
+     <![CDATA[SELECT * FROM cms_user where userId = ?;]]>
+</sql-query>
+
+
+     <sql-query id="duplicateSearchDatabyPubmed">
+          <![CDATA[SELECT id,result_title,result_abstract,origin_country,journal_information,author,reference_number,sourced_date as receivedDate,'Pubmed' as type,argus_number,isDuplicated,duplicatedReason FROM lm_search_article
+          WHERE journal_information = ? AND result_title = ? AND author = ? AND isDuplicated = ?]]>
+     </sql-query>
+     <sql-query id="duplicateSearchDatabySpringer">
+          <![CDATA[SELECT id,journal_information as result_title,narrative_and_comments as result_abstract,origin_country,author,reference_number,sourcedate as receivedDate,'Adisinsight' as type,argus_number,isDuplicated,duplicatedReason FROM lm_springer_article 
+          WHERE journal_information = ? AND isDuplicated = ?]]>
+     </sql-query>
+     <sql-query id="duplicateSearchDatabyLls">
+          <![CDATA[SELECT id,report_title as result_title,result_abstract,country as origin_country,journal_information,author,reference_number,day_zero as receivedDate,'LLS' as type,argus_number,isDuplicated,duplicatedReason FROM lm_lls_articles 
+          WHERE journal_information = ? AND report_title = ? AND author = ? AND isDuplicated = ?]]>
+     </sql-query>
+
+
+      <sql-query id="getDuplicateArticleData">
+     <![CDATA[SELECT 
+     sa.id as pubmed_id,sa.result_title as pubmed_result_title,result_abstract as pubmed_result_abstract,
+     origin_country as pubmed_origin_country,journal_information as pubmed_journal_information,author as pubmed_author,
+     reference_number as pubmed_reference_number,sourced_date as pubmed_receivedDate,
+     springer.id as springer_id,springer.artcile_title as springer_result_title,springer.narrative_and_comments as springer_result_abstract,
+     springer.origin_country as springer_origin_country,springer.reference as springer_journal_information,springer.author as springer_author,
+     springer.reference_number as springer_reference_number,springer.sourcedate as springer_receivedDate, 
+     lls.id as lls_id,lls.report_title as lls_result_title,lls.result_abstract as lls_result_abstract,
+     lls.country as lls_origin_country,lls.journal_information as lls_journal_information,lls.author as lls_author,
+     lls.reference_number as lls_reference_number,lls.day_zero as lls_receivedDate
+     FROM lm_query_translation lq
+     LEFT JOIN lm_search_article sa on (sa.journal_information = ? and sa.result_title = ? and sa.author = ?)
+     LEFT JOIN lm_springer_article springer on springer.journal_information = ?
+     LEFT JOIN lm_lls_articles lls on (lls.journal_information = ? and lls.report_title = ? and lls.author = ?)
+     WHERE (sa.journal_information = ?
+     AND sa.result_title = ?
+     AND sa.author = ?) 
+     OR springer.journal_information = ?
+     OR (lls.journal_information = ? AND lls.report_title = ? AND lls.author = ?);]]>
+     </sql-query>
+
+     <!-- LM Duplicate Articles Queries -->
+
+
+
+<sql-query id="getSearchArticleFollwupInfo">
+     <![CDATA[SELECT lf.filePath as full_textfile, lf.filesubmited_date as fulltext_received_date, lq.receieved_response as query_file, 
+               lq.received_date as query_recieved_date, lt.receieved_response as translation_file, lt.received_date as translation_recieved_date
+               from lm_search_article ls 
+               left  join lm_fullarticle_request lf on (lf.article_id = ls.id and lf.filesubmited_date is not null)
+               left  join lm_query_translation lq on (lq.article_id = ls.id and lq.type = "query" and lq.db_type = "pubmed" and lq.received_date is not null)
+               left  join lm_query_translation lt on (lt.article_id = ls.id and lt.type = "translation" and lt.db_type = "pubmed" and lt.received_date is not null)
+               where ls.id = ?]]>
+</sql-query>
+<sql-query id="getSpringerArticleFollwupInfo">
+     <![CDATA[SELECT lf.filePath as full_textfile, lf.filesubmited_date as fulltext_received_date, lq.receieved_response as query_file, 
+               lq.received_date as query_recieved_date, lt.receieved_response as translation_file, lt.received_date as translation_recieved_date
+               from lm_springer_article ls 
+               left  join lm_springer_fullarticle_request lf on (lf.article_id = ls.id and lf.filesubmited_date is not null)
+               left  join lm_query_translation lq on (lq.article_id = ls.id and lq.type = "query" and lq.db_type = "springer" and lq.received_date is not null)
+               left  join lm_query_translation lt on (lt.article_id = ls.id and lt.type = "translation" and lt.db_type = "springer" and lt.received_date is not null)
+               where ls.id = ?;]]>
+</sql-query>
+
+<sql-query id="getLlsArticleFollwupInfo">
+     <![CDATA[SELECT lf.filePath as full_textfile, lf.filesubmited_date as fulltext_received_date, lq.receieved_response as query_file, 
+               lq.received_date as query_recieved_date, lt.receieved_response as translation_file, lt.received_date as translation_recieved_date
+               from lm_lls_articles ls  
+               left  join lm_lls_fullarticle_request lf on (lf.article_id = ls.id and lf.filesubmited_date is not null)
+               left  join lm_query_translation lq on (lq.article_id = ls.id and lq.type = "query" and lq.db_type = "lls" and lq.received_date is not null)
+               left  join lm_query_translation lt on (lt.article_id = ls.id and lt.type = "translation" and lt.db_type = "lls" and lt.received_date is not null)
+               where ls.id = ?]]>
+</sql-query>
+
+
+ <sql-query id="updateArticle">
+        <![CDATA[UPDATE lm_search_article SET ? where id = ?]]>no
+    </sql-query>
+         <sql-query id="updateSpringerArticle">
+        <![CDATA[UPDATE lm_springer_article SET ? where id = ?]]>
+    </sql-query>
+       <sql-query id="updateLlsArticle">
+        <![CDATA[UPDATE lm_lls_articles SET ? where id = ?]]>
+    </sql-query>
+
+    <sql-query id="getPubmedDataById">     
+    <![CDATA[SELECT sa.*, lf.date as fullTextRequestedDate,lf.filesubmited_date as fullTextRecievedDate,ltu.username as literatureName,
+    sa.qcreviewer_by as qcReviewerName, sa.bookinreview_by as bookinName, sa.medical_review_by as medicalReviewerName,
+    sa.sourced_date as recievedDate, sa.lareviewer_date as literatureReviewDate, sa.qcreviewer_by as qcReviewerName, sa.qcreviewer_date as qcReviewerDate,
+   sa.bookinreview_date as bookinReviewDate, sa.medical_review_by as medicalReviewerName,
+    qt.created_on as translationRequestdate, qt.received_date as translationRecievedDate, qu.created_on as queryRequestedDate, 
+    qu.received_date as queryRecievedDate  FROM lm_search_article sa
+        left outer join lm_fullarticle_request lf on lf.article_id = sa.id
+        left outer join lm_user ltu on ltu.id = sa.article_assignedto
+        left outer join lm_query_translation qt on qt.article_id = sa.id and ( qt.type='translation' and qt.db_type = "pubmed")
+        left outer join lm_query_translation qu on qu.article_id = sa.id and ( qu.type='query' and qu.db_type = "pubmed")
+        where sa.id = ?;]]>
+    </sql-query>
+
+    <sql-query id="getAdisInsightDataById">     
+    <![CDATA[SELECT * from lm_springer_article where id = ?;]]>
+    </sql-query>
+
+    <sql-query id="getLLSDataById">     
+     <![CDATA[SELECT * from lm_lls_articles where id = ?;]]>
+    </sql-query>
+    <sql-query id="getLLSDocumentsByID">     
+     <![CDATA[SELECT * from lm_lls_articles where id = ?;]]>
+    </sql-query>
+    
+<!-- LM Queries-->
+
+
+<sql-query id="saveHealthAuthorityHoliday">
+          <![CDATA[INSERT INTO cms_health_auth_holidays(`holidayDate`,`holidayName` ) VALUES (?, ?);]]>
+    </sql-query>
+
+    <sql-query id="deleteHealthAuthorityHoliday">
+        <![CDATA[DELETE FROM cms_health_auth_holidays where id=?;]]>
+    </sql-query>
+
+    <sql-query id="getHealthAuthorityHoliday">
+        <![CDATA[SELECT * from cms_health_auth_holidays]]>
+    </sql-query>
+
+    <sql-query id="updateHealthAuthorityHoliday">
+        <![CDATA[UPDATE cms_health_auth_holidays SET  holidayDate = ?, holidayName = ? where id = ?]]>
+    </sql-query>
+
+    <sql-query id="saveCheckListinfo">
+          <![CDATA[INSERT INTO  cms_health_auth_checklist (`checklistname` ) VALUES (?);]]>
+    </sql-query>
+
+    <sql-query id="updateCheckListData">
+        <![CDATA[UPDATE cms_health_auth_checklist SET checklistname = ? WHERE id = ?;]]>
+    </sql-query>
+    
+
+    <sql-query id="getCheckListData">
+        <![CDATA[SELECT * from cms_health_auth_checklist group by checklistname;]]>
+    </sql-query>
+    <sql-query id="getCheckListByid">
+        <![CDATA[ select * from cms_health_auth_checklist where id = ?]]>
+    </sql-query>
+    <sql-query id="deleteCheckListData">
+        <![CDATA[DELETE FROM cms_health_auth_checklist where id=?;]]>
+    </sql-query>
+    <sql-query id="getManufacturedBy">
+        <![CDATA[SELECT * from cms_product_manufactured_by ORDER BY id ASC;]]>
+    </sql-query>
+    <sql-query id="getManufacturedByArgus">
+        <![CDATA[SELECT DISTINCT(`manufacturedBy`) as manufacturedBy from cms_argus_product_dictionary where `manufacturedBy` is not null ORDER BY manufacturedBy ASC;]]>
+    </sql-query>
+    <sql-query id="getcountryListData">
+        <![CDATA[SELECT * from cms_argus_countries ORDER BY C0UNTRY ASC;]]>
+    </sql-query>
+
+    <sql-query id="saveManufacturedBy">
+          <![CDATA[INSERT INTO  cms_product_manufactured_by (`manufacturedBy` ) VALUES (?);]]>
+    </sql-query>
+     <sql-query id="savecountryData">
+          <![CDATA[INSERT INTO  cms_argus_countries (`C0UNTRY` ) VALUES (?);]]>
+    </sql-query>
+     <sql-query id="saveCountryId">
+          <![CDATA[UPDATE cms_argus_countries SET `COUNTRY_ID` = ? WHERE id = ?;]]>
+    </sql-query>
+    <sql-query id="updatemanufacturedByData">
+        <![CDATA[UPDATE cms_product_manufactured_by SET manufacturedBy = ? WHERE id = ?;]]>
+    </sql-query>
+     <sql-query id="countryExistancyCheck">
+          <![CDATA[SELECT * FROM cms_argus_countries WHERE C0UNTRY = ?;]]>
+    </sql-query>
+    <sql-query id="updatecountryData">
+        <![CDATA[UPDATE cms_argus_countries SET C0UNTRY = ? WHERE id = ?;]]>
+    </sql-query>
+
+    <sql-query id="deletemanufacturedByListData">
+        <![CDATA[DELETE FROM cms_product_manufactured_by where id=?;]]>
+    </sql-query>
+    <sql-query id="deletecountryData">
+        <![CDATA[DELETE FROM cms_argus_countries where id=?;]]>
+    </sql-query>
+
+    <sql-query id="getmanufacturedByid">
+        <![CDATA[ select * from cms_product_manufactured_by where id = ?]]>
+    </sql-query>
+    <sql-query id="manufacturerExistancyCheck">
+          <![CDATA[SELECT prod.*,argus.* FROM cms_product_manufactured_by prod 
+          LEFT JOIN cms_argus_product_dictionary argus 
+          ON argus.manufacturedBy = prod.manufacturedBy WHERE prod.manufacturedBy = ?;]]>
+    </sql-query>
+    <sql-query id="argusManufacturerExistancyCheck">
+          <![CDATA[SELECT * FROM cms_argus_product_dictionary WHERE manufacturedBy = ?;]]>
+    </sql-query>
+    <sql-query id="productsManufacturerExistancyCheck">
+          <![CDATA[SELECT * FROM cms_product_manufactured_by WHERE manufacturedBy = ?;]]>
+    </sql-query>
+    <sql-query id="getcountryId">
+        <![CDATA[ select * from cms_argus_countries where id = ?]]>
+    </sql-query>
+
+    <sql-query id="getSignleHealthAuthorityHoliday">
+        <![CDATA[ select * from cms_health_auth_holidays where id = ?]]>
+    </sql-query>
+    <sql-query id="gethealthauthorityautAuthReports">
+          <![CDATA[select * from cms_health_auth_reports]]>
+     </sql-query>
+     <sql-query id="gethealthauthorityScreenshots">
+          <![CDATA[select * from cms_health_auth_screenshots where created_on between? and ?;]]>
+     </sql-query>
+     
+      <sql-query id="getUsersList">
+          <![CDATA[select * from cms_user]]>
+     </sql-query>
+     <sql-query id="postPreferencesForm">
+     <![CDATA[INSERT INTO cms_preferences(logo, createdOn,filename) VALUES (?,?,?);]]>
+     </sql-query>
+     <sql-query id="updatePreferencesForm">
+     <![CDATA[UPDATE cms_preferences SET logo = ?, createdOn = ?, filename = ? WHERE id = ?;]]>
+     </sql-query>
+       <sql-query id="deletePreferenceLogos">
+     <![CDATA[DELETE FROM  cms_preferences WHERE id = ?;]]>
+     </sql-query>
+     
+     <sql-query id="getAuditsNameslist">     
+     <![CDATA[SELECT * FROM cms_audits where active = 1 order by audit;]]>
+     </sql-query>
+     <sql-query id="getpeferenceslogoslist">     
+     <![CDATA[SELECT * FROM cms_preferences order by id desc limit 1;]]>
+     </sql-query>  
+     <sql-query id="getHealthAUthorityReports">
+          <![CDATA[select * from cms_cases_health_authority where messagedate between ? and ?;]]>
+     </sql-query>
+     <sql-query id="getTimeLineSettings">     
+     <![CDATA[SELECT * FROM cms_timeline_conf;]]>
+     </sql-query>
+     <sql-query id="postTimeLineSettings">
+     <![CDATA[INSERT INTO cms_timeline_conf(timelineDays, email, jobtime, followupDays) VALUES (?,?,?,?);]]>
+     </sql-query>
+     <sql-query id="updateTimeLineSettings">
+     <![CDATA[UPDATE cms_timeline_conf SET timelineDays = ?, email = ?, jobtime = ?, followupDays = ? WHERE id = ?;]]>
+     </sql-query>
+      <sql-query id="getemailcaseslogs">
+     <![CDATA[SELECT
+          COALESCE(sum(case when routeOfEnquiryId = ? and caseManageStatus = "CASEINTAKE_INITIATED" and isCaseValid = true then 1 else 0 end), 0) AS pending,       
+          COALESCE(sum(case when routeOfEnquiryId = ? and (caseManageStatus = "CASEINTAKE_ASSIGNED" || caseManageStatus = "MEDICALENQURIY_ASSIGNED") and isCaseValid = true then 1 else 0 end), 0) AS inprogress,
+          COALESCE(sum(case when routeOfEnquiryId = ? and caseManageStatus = "MEDICALENQURIY_CLOSED" and isCaseValid = true then 1 else 0 end), 0) AS completed,    
+          COALESCE(sum(case when routeOfEnquiryId = ? and caseManageStatus = "CASEINTAKE_REJECTED" and isCaseValid = false then 1 else 0 end), 0) AS rejected
+          FROM cms_cases ]]>
+     </sql-query>
+     <sql-query id="getMIcasesStatsReviewer">
+     <![CDATA[SELECT
+          COALESCE(sum(case when caseClassification like ? and assignedTo = ? and isCaseValid = true and caseManageStatus = ? then 1 else 0 end), 0) AS pending,
+          COALESCE(sum(case when caseClassification like ? and assignedTo = ? and isCaseValid = true and caseManageStatus = ? then 1 else 0 end), 0) AS closed
+          FROM cms_cases;]]>
+     </sql-query>
+     <sql-query id="getMIcasesStatsApprover">
+     <![CDATA[SELECT
+          COALESCE(sum(case when caseClassification like ? and approvedBy = ? and isCaseValid = true and caseManageStatus = ? then 1 else 0 end), 0) AS pending,
+          COALESCE(sum(case when caseClassification like ? and approvedBy = ? and isCaseValid = true and caseManageStatus = ? then 1 else 0 end), 0) AS closed
+          FROM cms_cases;]]>
+     </sql-query>
+     <sql-query id="getMIcasesStatsMedicalApprover">
+     <![CDATA[SELECT
+          COALESCE(sum(case when caseClassification like ? and medicalReviewBy = ? and isCaseValid = true and caseManageStatus = ? then 1 else 0 end), 0) AS pending,
+          COALESCE(sum(case when caseClassification like ? and medicalReviewBy = ? and isCaseValid = true and caseManageStatus = ? then 1 else 0 end), 0) AS closed
+          FROM cms_cases;]]>
+     </sql-query>
+     <sql-query id="insertProductsFromArgus">
+     <![CDATA[INSERT INTO cms_product(`PRODUCT_ID`,`PROD_NAME`, `FORMULATION_ID`, `MANUFACTURER_ID`, `CONCENTRATION`, `CONC_UNIT_ID`, `ENTERPRISE_ID`) VALUES (?);]]>
+     </sql-query>
+      <sql-query id="insertProductsFamilyFromArgus">
+     <![CDATA[INSERT INTO cms_product_family(FAMILY_ID, NAME, PRIMARY_VIEW, DELETED, PRODUCT_GROUP_ID, NAME_J, COMMENTS, SEARCH_EQUATION_NUMBER, ENTERPRISE_ID, COMMENTS_J, LAST_UPDATE_TIME) VALUES (?);]]>
+     </sql-query>
+      <sql-query id="insertProductsLicenseFromArgus">
+     <![CDATA[INSERT INTO cms_product_license(LICENSE_ID, TRADE_NAME, MANUFACTURER_ID, COUNTRY_ID, LICENSE_TYPE_ID, LIC_NUMBER, AWARD_DATE, WITHDRAW_DATE, DRL_ID, BIOLOGIC, REG_RPT_RULES_ID) VALUES (?);]]>
+     </sql-query>
+
+     
+     <sql-query id="getCountryData">
+     <![CDATA[SELECT * FROM cms_argus_countries;]]>
+     </sql-query>
+     <sql-query id="getAllProductsData">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE active = 1 ORDER BY id ASC limit ?,?;]]>
+     </sql-query>
+     <sql-query id="getAllProductsDataCount">
+     <![CDATA[SELECT COUNT(id) as count from cms_argus_product_dictionary WHERE active = 1;]]>
+     </sql-query>
+     <sql-query id="getProductsData">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE active = 1;]]>
+     </sql-query>
+     <sql-query id="getUniqueProductsData">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths FROM cms_argus_product_dictionary WHERE active = 1 and productName is not null GROUP BY productName LIMIT 1000;]]>
+     </sql-query>
+     <sql-query id="getArgusProductSearchDataLimit">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE active = 1 and productName is not null GROUP BY productName LIMIT 1000;]]>
+     </sql-query>
+     <sql-query id="getUniqueProductsDataByType">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE active = 1 and productName is not null and type = ? GROUP BY productName;]]>
+     </sql-query>
+     <sql-query id="getProductSearchData">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE active = 1 and productName like %?%;]]>
+     </sql-query>
+     <sql-query id="getProductDataById">
+     <![CDATA[SELECT *, CONCAT_WS(" ",concUnitId, concentration) as strengths from cms_argus_product_dictionary WHERE id = ?;]]>
+     </sql-query>     
+     <sql-query id="checkDuplicateProduct">
+     <![CDATA[SELECT * from cms_argus_product_dictionary WHERE `productName` = ? and `manufacturedBy` = ? and `country` = ? and `activeIngredient` = ?;]]>
+     </sql-query>
+     <sql-query id="getProductDataByIds">
+     <![CDATA[SELECT * from cms_case_products where caseId = ?;]]>
+     </sql-query>
+     <sql-query id="addProduct">
+          <![CDATA[INSERT INTO cms_argus_product_dictionary(`productName`, `manufacturedBy`, `concentration`, `size`, `ncdNumber`, `lotNumber`, `numberOfBottle`, `exipiryDate`,`country`, `maNumber`, `activeIngredient`, `type`, `active`, `createdBy`, `createdDate`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+     </sql-query>
+     <sql-query id="updateProduct">
+          <![CDATA[UPDATE cms_argus_product_dictionary SET `productName` = ?, `manufacturedBy` = ?, `concentration` = ?, `size` = ?, `ncdNumber` = ?, `lotNumber` = ?, `numberOfBottle` = ?, `exipiryDate` = ?, `country` = ?, `maNumber` = ?, `activeIngredient` = ?, `type` = ?, `modifiedBy` = ?, `modifiedDate` = ? where id = ?;]]>
+     </sql-query>
+     <sql-query id="getHealthAUthorityReports">
+          <![CDATA[select * from cms_health_auth_reports where created_on between ? and ?;]]>
+     </sql-query>
+     <sql-query id="postSocialMediaMessages">
+          <![CDATA[INSERT INTO cms_socialmedia_messages(`message`, `send_on`, `sent_by`, `source_date`, `platform_name`) VALUES (?,?,?,?,?);]]>
+     </sql-query>
+     <sql-query id="postSocialMediaComments">
+          <![CDATA[INSERT INTO cms_socialmedia_comments(`posturl`, `postType`, `comment`, `commented_on`, `commented_by`, `source_date`, `platform_name`) VALUES (?,?,?,?,?,?,?);]]>
+     </sql-query>
+     <sql-query id="postSocialMediaNotifications">
+          <![CDATA[INSERT INTO cms_socialmedia_notifications(`notification`, `notified_on`, `received_by`, `source_date`, `platform_name`) VALUES (?,?,?,?,?);]]>
+     </sql-query>   
+       
+     <sql-query id="getCaseEventDetails">
+          <![CDATA[SELECT * from cms_case_event_details WHERE caseId = ?;]]>
+     </sql-query>  
+     <sql-query id="postCaseEventDetails">
+          <![CDATA[INSERT INTO cms_case_event_details(`caseId`, `descriptionasreported`, `medDRA`, `medicalConfirm`, `eventstartdate`, `eventstopdate`,`outcomeEvent`, `isoutcomefatal`, `autopsydetails`, `createdOn`, `createdBy`) VALUES (?,?,?,?,?,?,?,?,?,?,?);]]>
+     </sql-query>
+     <sql-query id="updateCaseEventDetails">
+          <![CDATA[UPDATE cms_case_event_details SET `descriptionasreported` = ?, `medDRA` = ?, `medicalConfirm` = ?,`eventstartdate` = ?, `eventstopdate` = ?, `outcomeEvent` = ?, `isoutcomefatal` = ?, `autopsydetails` = ?, `modifiedOn` = ?, `modifiedBy` = ? WHERE id =?]]>
+     </sql-query>
+     <sql-query id="deleteEventById">
+          <![CDATA[DELETE FROM cms_case_event_details WHERE id = ?;]]>
+     </sql-query>
+     
+     <sql-query id="postDrugInfoDetails">
+          <![CDATA[INSERT INTO lm_drug_information_details(`articleId`, `safetyReportId`, `type`, `obtainDrugCountry`, `drugAuthorizationCountry`, `drugAuthorizationHolder`,`drugDosageText`, `drugAdministrationRoute`, `drugIndicationMeddraVersion`, `drugIndication`, `actionDrug`, `drugRecurreAdministration`, `drugCharacterization` , `createdOn`) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?);]]>
+     </sql-query>
+     <sql-query id="updateDrugInfoDetails">
+          <![CDATA[UPDATE lm_drug_information_details SET `obtainDrugCountry` = ?, `drugAuthorizationCountry` = ?, `drugAuthorizationHolder` = ?,`drugDosageText` = ?, `drugAdministrationRoute` = ?, `drugIndicationMeddraVersion` = ?, `drugIndication` = ?, `actionDrug` = ?, `drugRecurreAdministration` = ?, `drugCharacterization` = ?, `updatedOn` = ? WHERE id =?]]>
+     </sql-query>
+     <sql-query id="deleteDrugInfoById">
+          <![CDATA[DELETE FROM lm_drug_information_details WHERE id = ?;]]>
+     </sql-query>
+</sql-queries>
